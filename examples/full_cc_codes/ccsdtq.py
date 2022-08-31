@@ -21,6 +21,7 @@ the main() function is fairly straightforward.
 # set allow numpy built with MKL to consume more threads for tensordot
 import os
 os.environ["MKL_NUM_THREADS"] = "{}".format(os.cpu_count() - 1)
+print('number of cpu threads: ', os.cpu_count())
 
 import numpy as np
 from numpy import einsum

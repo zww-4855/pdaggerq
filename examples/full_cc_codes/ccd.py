@@ -25,6 +25,7 @@ def ccsd_energy(t1, t2, f, g, o, v):
     :return:
     """
 
+    energy=0.0
     #	 -0.5000 <j,i||j,i>
     energy += -0.5 * einsum('jiji', g[o, o, o, o])
 
@@ -49,6 +50,15 @@ def doubles_residual(t1, t2, f, g, o, v):
     :param v:
     :return:
     """
+
+
+#     -1.0000 P(i,j)f(k,j)*t2(a,b,i,k)
+    contracted_intermediate = -1.000000000000000 * einsum('kj,abik->abij', f[o, o], t2)
+    doubles_res =  1.00000 * contracted_intermediate + -1.00000 * einsum('abij->abji', contracted_intermediate)
+
+#      1.0000 P(a,b)f(a,c)*t2(c,b,i,j)
+    contracted_intermediate =  1.000000000000000 * einsum('ac,cbij->abij', f[v, v], t2)
+    doubles_res +=  1.00000 * contracted_intermediate + -1.00000 * einsum('abij->baij', contracted_intermediate)
 
 #      1.0000 <a,b||i,j>
     doubles_res +=  1.000000000000000 * einsum('abij->abij', g[v, v, o, o])
@@ -79,7 +89,6 @@ def doubles_residual(t1, t2, f, g, o, v):
 
 #     -0.5000 <l,k||c,d>*t2(c,a,i,j)*t2(d,b,l,k)
     doubles_res += -0.500000000000000 * einsum('lkcd,caij,dblk->abij', g[o, o, v, v], t2, t2, optimize=['einsum_path', (0, 2), (0, 1)])
-
     return doubles_res
 
 def kernel(t1, t2, fock, g, o, v, e_ai, e_abij, max_iter=100, stopping_eps=1.0E-8,
@@ -98,10 +107,8 @@ def kernel(t1, t2, fock, g, o, v, e_ai, e_abij, max_iter=100, stopping_eps=1.0E-
     old_energy = ccsd_energy(t1, t2, fock, g, o, v)
     for idx in range(max_iter):
 
-        singles_res = singles_residual(t1, t2, fock, g, o, v) + fock_e_ai * t1
         doubles_res = doubles_residual(t1, t2, fock, g, o, v) + fock_e_abij * t2
 
-        new_singles = singles_res * e_ai
         new_doubles = doubles_res * e_abij
 
         # diis update
@@ -115,19 +122,18 @@ def kernel(t1, t2, fock, g, o, v, e_ai, e_abij, max_iter=100, stopping_eps=1.0E-
             new_doubles = new_vectorized_iterate[t1_dim:].reshape(t2.shape)
             old_vec = new_vectorized_iterate
 
-        current_energy = ccsd_energy(new_singles, new_doubles, fock, g, o, v)
+        current_energy = ccsd_energy(0, new_doubles, fock, g, o, v)
         delta_e = np.abs(old_energy - current_energy)
 
         if delta_e < stopping_eps:
-            return new_singles, new_doubles
+            return  new_doubles
         else:
-            t1 = new_singles
             t2 = new_doubles
             old_energy = current_energy
             print("\tIteration {: 5d}\t{: 5.15f}\t{: 5.15f}".format(idx, old_energy, delta_e))
     else:
         print("Did not converge")
-        return new_singles, new_doubles
+        return  new_doubles
 
 
 def main():
@@ -142,7 +148,7 @@ def main():
 
     basis = 'cc-pvdz'
     mol = pyscf.M(
-        atom='H 0 0 0; B 0 0 {}'.format(1.6),
+        atom='H 0 0 0; B 0 0 {}'.format(1.600),
         basis=basis)
 
     mf = mol.RHF().run()
@@ -183,12 +189,12 @@ def main():
     g = gtei
     nsvirt = 2 * (norbs - nocc)
     nsocc = 2 * nocc
-    t1f, t2f = kernel(np.zeros((nsvirt, nsocc)), np.zeros((nsvirt, nsvirt, nsocc, nsocc)), fock, g, o, v, e_ai, e_abij)
-    print(ccsd_energy(t1f, t2f, fock, g, o, v) - hf_energy)
+    t2f = kernel(np.zeros((nsvirt, nsocc)), np.zeros((nsvirt, nsvirt, nsocc, nsocc)), fock, g, o, v, e_ai, e_abij)
+    print(ccsd_energy(0.0, t2f, fock, g, o, v) - hf_energy)
 
-    t1f, t2f = kernel(np.zeros((nsvirt, nsocc)), np.zeros((nsvirt, nsvirt, nsocc, nsocc)), fock, g, o, v, e_ai, e_abij,
-                      diis_size=8, diis_start_cycle=4)
-    print(ccsd_energy(t1f, t2f, fock, g, o, v) - hf_energy)
+#    t1f, t2f = kernel(np.zeros((nsvirt, nsocc)), np.zeros((nsvirt, nsvirt, nsocc, nsocc)), fock, g, o, v, e_ai, e_abij,
+#                      diis_size=8, diis_start_cycle=4)
+#    print(ccsd_energy(t1f, t2f, fock, g, o, v) - hf_energy)
 
 
 
