@@ -38,17 +38,17 @@ class pq {
     /// are bosonic operators in normal order?
     bool is_boson_normal_order();
 
-    /// how many times does label "idx" appear in any term?
+    /// how many times does label "idx" appear in deltas, amplitudes, or integrals?
     int index_in_anywhere(std::string idx);
 
     /// how many times does label "idx" appear in delta terms?
     int index_in_deltas(std::string idx);
 
-    /// how many times does label "idx" appear in tensor term?
-    int index_in_tensor(std::string idx);
+    /// how many times does label "idx" appear in a given set of integrals
+    int index_in_integrals(std::string idx, std::vector<integrals> ints);
 
-    /// how many times does label "idx" appear in a given term
-    int index_in_term(std::string idx, std::vector<std::vector<std::string> > term);
+    /// how many times does label "idx" appear in a given set of amplitudes
+    int index_in_amplitudes(std::string idx, std::vector<amplitudes> amps);
 
     /// replace one label with another (everywhere)
     void replace_index_everywhere(std::string old_idx, std::string new_idx);
@@ -56,11 +56,11 @@ class pq {
     /// replace one label with another (in delta functions)
     void replace_index_in_deltas(std::string old_idx, std::string new_idx);
 
-    /// replace one label with another (in tensor)
-    void replace_index_in_tensor(std::string old_idx, std::string new_idx);
+    /// replace one label with another (in a given set of integrals)
+    void replace_index_in_integrals(std::string old_idx, std::string new_idx, std::vector<integrals> &ints);
 
-    /// replace one label with another (in a given term)
-    void replace_index_in_term(std::string old_idx, std::string new_idx, std::vector<std::vector<std::string> > &term);
+    /// replace one label with another (in a given set of amplitudes)
+    void replace_index_in_amplitudes(std::string old_idx, std::string new_idx, std::vector<amplitudes> &amps);
 
     /// are two strings the same? if so, how many permutations to relate them?
     bool compare_strings(std::shared_ptr<pq> ordered_1, std::shared_ptr<pq> ordered_2, int & n_permute);
@@ -68,24 +68,15 @@ class pq {
     /// swap to labels
     void swap_two_labels(std::string label1, std::string label2);
 
-    /// compare two lists of amplitudes
-    bool compare_amplitudes( std::vector<std::vector<std::string> > amps1, 
-                             std::vector<std::vector<std::string> > amps2, 
+    /// compare two lists of amplitudes 
+    bool compare_amplitudes( std::vector<amplitudes> amps1, 
+                             std::vector<amplitudes> amps2, 
                              int & n_permute );
 
-    /// permutations and coincidences for triples
-    void triples_permutations(std::vector<std::string> amps1, 
-                              std::vector<std::string> amps2, 
-                              int & nsame_idx, 
-                              int & n_permute,
-                              int off);
-    /// permutations and coincidences for quadruples
-    void quadruples_permutations(std::vector<std::string> amps1, 
-                                 std::vector<std::string> amps2, 
-                                 int & nsame_idx, 
-                                 int & n_permute,
-                                 int off);
-
+    /// compare two lists of integrals 
+    bool compare_integrals( std::vector<integrals> ints1, 
+                            std::vector<integrals> ints2, 
+                            int & n_permute );
 
   public:
 
@@ -119,33 +110,19 @@ class pq {
     /// list: is fermionic operator creator or annihilator (relative to fermi vacuum)?
     std::vector<bool> is_dagger_fermi;
 
-    /// list of delta functions (index 1)
-    std::vector<std::string> delta1;
-
-    /// list of delta functions (index 2)
-    std::vector<std::string> delta2;
-
-    /// detailed information about string (t, R, L, amplitudes, bosons, etc.)
+    /// detailed information about string (amplitudes, bosons, integrals, deltas, etc.)
     std::shared_ptr<StringData> data;
 
     /// print string information
     void print();
 
-    /// print amplitudes
-    void print_amplitudes(std::string label, std::vector<std::vector<std::string> > amplitudes);
-
-    /// add amplitudes to list of strings
-    void print_amplitudes_to_string(std::string label, 
-                                    std::vector<std::vector<std::string> > amplitudes, 
-                                    std::vector<std::string> &my_string );
-
     /// get string information
     std::vector<std::string> get_string();
 
-    /// check if string should be zero by o/v labels in delta function
-    void check_occ_vir();
+    /// get string information (with spin)
+    std::vector<std::string> get_string_with_spin();
 
-    /// apply delta functions to string / tensor labels
+    /// apply delta functions to amplitude and integral labels
     void gobble_deltas();
 
     /// replace internal labels with conventional ones (o1 -> i, etc.)
@@ -165,6 +142,9 @@ class pq {
 
     /// cancel terms where appropriate
     void cleanup(std::vector<std::shared_ptr<pq> > &ordered);
+
+    /// expand sums to include spin and zero terms where appropriate
+    void spin_blocking(std::vector<std::shared_ptr<pq> > &spin_blocked, std::map<std::string, std::string> spin_map);
 
     /// consolidate terms that differ by summed labels plus permutations
     void consolidate_permutations_plus_swap(
@@ -245,6 +225,9 @@ class pq {
     /// consolidate terms that differ by permutations
     void consolidate_permutations(std::vector<std::shared_ptr<pq> > &ordered);
 
+    /// sort amplitude and integral labels
+    void sort_labels();
+
     /// reorder t amplitudes as t1, t2, t3
     void reorder_t_amplitudes();
 
@@ -255,7 +238,26 @@ class pq {
     bool is_vir(std::string idx);
 
     /// re-classify fluctuation potential terms
-    void reclassify_tensors();
+    void reclassify_integrals();
+
+    /// reset spin labels (so only non-summed labels are set)
+    void reset_spin_labels();
+
+    /// set non-summed spin labels
+    void set_non_summed_spin_labels(std::vector<std::string> occ_spin_labels, std::vector<std::string> vir_spin_labels);
+
+    /// add spin labels to a string
+    bool add_spins(std::vector<std::shared_ptr<pq> > &list);
+
+    /// set spin labels in integrals and amplitudes
+    void set_spin_everywhere(std::string target, std::string spin);
+
+    /// reorder three spin labels as aab or abb
+    void reorder_three_spins(amplitudes & amps, int i1, int i2, int i3, int & sign);
+
+    /// reorder four spin labels as aaab, aabb, or abbb
+    void reorder_four_spins(amplitudes & amps, int i1, int i2, int i3, int i4, int & sign);
+
 };
 
 }

@@ -31,35 +31,6 @@ namespace pdaggerq {
 
 class pq_helper {
 
-  private:
-
-    /// list of strings of operators
-    std::vector< std::shared_ptr<pq> > ordered;
-
-    /// strings, tensors, etc.
-    std::shared_ptr<StringData> data;
-
-    /// vacuum (fermi or true)
-    std::string vacuum;
-
-    /// print level
-    int print_level;
-
-    /// operators to apply to the left of any operator products we add
-    std::vector<std::vector<std::string> > left_operators;
-
-    /// operators to apply to the right of any operator products we add
-    std::vector<std::vector<std::string> > right_operators;
-
-    /// do operators entering a similarity transformation commute?
-    bool cluster_operators_commute_;
-
-    /// right-hand operators type (EE, IP, EA)
-    std::string right_operators_type;
-
-    /// left-hand operators type (EE, IP, EA)
-    std::string left_operators_type;
-
   public:
 
     /// constructor
@@ -74,50 +45,24 @@ class pq_helper {
     /// set operators to apply to the right of any operator products we add
     void set_right_operators(std::vector<std::vector<std::string> >in);
 
+    /// set right-hand operators type (EE, IP, EA)
+    void set_right_operators_type(std::string type);
+
+    /// set right-hand operators type (EE, IP, EA)
+    void set_left_operators_type(std::string type);
+
+    /// do operators entering similarity transformation commute? default true
+    void set_cluster_operators_commute(bool do_cluster_operators_commute);
+
     /// set print level (default zero)
     void set_print_level(int level);
 
-    /// set a string of creation / annihilation operators
-    void set_string(std::vector<std::string> in);
-
-    /// set labels for a one- or two-body tensor
-    void set_tensor(std::vector<std::string> in, std::string tensor_type);
-
-    /// set labels for t1, t2, or t3 amplitudes
-    void set_t_amplitudes(std::vector<std::string> in);
-
-    /// set labels for u1 or u2 amplitudes
-    void set_u_amplitudes(std::vector<std::string> in);
-
-    /// set labels for m1 or m2 amplitudes
-    void set_m_amplitudes(std::vector<std::string> in);
-
-    /// set labels for s1 or s2 amplitudes
-    void set_s_amplitudes(std::vector<std::string> in);
-
-    /// set labels for l1 or l2 amplitudes
-    void set_left_amplitudes(std::vector<std::string> in);
-
-    /// set labels for r1 or r2 amplitudes
-    void set_right_amplitudes(std::vector<std::string> in);
-
-    /// set a numerical factor
-    void set_factor(double in);
-
-    /// add new completed string / tensor / amplitudes / factor
-    void add_new_string();
-
-    /// add new completed string / tensor / amplitudes / factor (assuming normal order is definied relative to the true vacuum
-    void add_new_string_true_vacuum();
-
-    /// add new completed string / tensor / amplitudes / factor (assuming normal order is definied relative to the fermi vacuum
-    void add_new_string_fermi_vacuum();
-
-    /// add new complete string as a product of operators (i.e., {'h(pq)','t1(ai)'} )
+    /// add new complete string as a product of operators (i.e., {'h','t1'} )
     void add_operator_product(double factor, std::vector<std::string> in);
 
     /// add similarity-transformed operator expansion of an operator
-    void add_st_operator(double factor, std::vector<std::string> targets, std::vector<std::string> ops);
+    void add_st_operator(double factor, std::vector<std::string> targets, 
+                                        std::vector<std::string> ops);
 
     /// add commutator of two operators
     void add_commutator(double factor, std::vector<std::string> op0,
@@ -141,39 +86,72 @@ class pq_helper {
                                                  std::vector<std::string> op3,
                                                  std::vector<std::string> op4);
 
-
-    /// cancel terms, if possible
+    /// cancel terms, if possible, and identify permutations of non-summed labels
     void simplify();
 
     /// clear strings
     void clear();
 
-    /// print strings
-    void print();
-
-    /// get list of strings 
+    /// get list of all strings 
     std::vector<std::vector<std::string> > strings();
-
-    /// print fully-contracted strings
-    void print_fully_contracted();
 
     /// get list of fully-contracted strings
     std::vector<std::vector<std::string> > fully_contracted_strings();
 
-    /// print one-body strings
-    void print_one_body();
+    /// get list of fully-contracted strings, after spin tracing
+    std::vector<std::vector<std::string> > fully_contracted_strings_with_spin(std::map<std::string, std::string> spin_labels);
 
-    /// print two-body strings
-    void print_two_body();
+    /// print strings 
+    ///     string_type = 'all', 'one-body', 'two-body', 'fully-contracted'
+    ///     py-side default = 'fully-contracted'
+    void print(std::string string_type);
 
-    /// do operators entering similarity transformation commute? default true
-    void set_cluster_operators_commute(bool cluster_operators_commute);
+  private:
 
-    /// set right-hand operators type (EE, IP, EA)
-    void set_right_operators_type(std::string type);
+    /// list of strings of operators
+    std::vector< std::shared_ptr<pq> > ordered;
 
-    /// set right-hand operators type (EE, IP, EA)
-    void set_left_operators_type(std::string type);
+    /// strings, amplitudes, integrals, etc.
+    std::shared_ptr<StringData> data;
+
+    /// vacuum (fermi or true)
+    std::string vacuum;
+
+    /// print level
+    int print_level;
+
+    /// operators to apply to the left of any operator products we add
+    std::vector<std::vector<std::string> > left_operators;
+
+    /// operators to apply to the right of any operator products we add
+    std::vector<std::vector<std::string> > right_operators;
+
+    /// right-hand operators type (EE, IP, EA)
+    std::string right_operators_type;
+
+    /// left-hand operators type (EE, IP, EA)
+    std::string left_operators_type;
+
+    /// do operators entering a similarity transformation commute?
+    bool cluster_operators_commute;
+
+    /// set a numerical factor
+    void set_factor(double in);
+
+    /// set a string of creation / annihilation operators
+    void set_string(std::vector<std::string> in);
+
+    /// set labels for integrals
+    void set_integrals(std::string type, std::vector<std::string> in);
+
+    /// set labels for amplitudes
+    void set_amplitudes(char type, int order, std::vector<std::string> in);
+
+    /// add new completed string / integrals / amplitudes / factor (assuming normal order is definied relative to the true vacuum
+    void add_new_string_true_vacuum();
+
+    /// add new completed string / integrals / amplitudes / factor (assuming normal order is definied relative to the fermi vacuum
+    void add_new_string_fermi_vacuum();
 
 };
 

@@ -32,7 +32,6 @@
 
 #include "pq.h"
 
-
 // work-around for finite precision of std::to_string
 template <typename T>
 std::string to_string_with_precision(const T a_value, const int n = 14)
@@ -102,70 +101,6 @@ bool pq::is_vir(std::string idx) {
     return false;
 }
 
-void pq::check_occ_vir() {
-
-   // OCC: I,J,K,L,M,N
-   // VIR: A,B,C,D,E,F
-   // GEN: P,Q,R,S,T,U,V,W
-
-   for (size_t i = 0; i < delta1.size(); i++ ) {
-       bool first_is_occ = false;
-       if ( is_occ(delta1[i]) ){
-           first_is_occ = true;
-       }else if ( is_vir(delta1[i]) ) {
-           first_is_occ = false;
-       }else {
-           continue;
-       }
-
-       bool second_is_occ = false;
-       if ( is_occ(delta2[i]) ){
-           second_is_occ = true;
-       }else if ( is_vir(delta2[i]) ) {
-           second_is_occ = false;
-       }else {
-           continue;
-       }
-
-       if ( first_is_occ != second_is_occ ) {
-           skip = true;
-       }
-
-   }
-
-}
-
-void pq::print_amplitudes(std::string label, std::vector<std::vector<std::string> > amplitudes) {
-
-    if ( amplitudes.size() == 0 ) {
-        return;
-    }
-
-    for (size_t i = 0; i < amplitudes.size(); i++) {
-
-        if ( amplitudes[i].size() > 0 ) {
-
-            size_t size  = amplitudes[i].size();
-            size_t order = amplitudes[i].size() / 2;
-            if ( 2*order != size ) {
-                order++;
-            }
-            printf("%s",label.c_str());
-            printf("%zu",order);
-            printf("(");
-            for (size_t j = 0; j < size-1; j++) {
-                printf("%s",amplitudes[i][j].c_str());
-                printf(",");
-            }
-            printf("%s",amplitudes[i][size-1].c_str());
-            printf(")");
-            printf(" ");
-
-        }
-    }
-
-}
-
 void pq::print() {
 
     if ( skip ) return;
@@ -179,16 +114,11 @@ void pq::print() {
         }
     }
 
-    //for (size_t i = 0; i < symbol.size(); i++) {
-    //    printf("%5zu\n",is_dagger_fermi[i]);
-    //}
-
     printf("    ");
     printf("//     ");
     printf("%c", sign > 0 ? '+' : '-');
     printf(" ");
     printf("%20.14lf", fabs(data->factor));
-    //printf("%7.5lf", fabs(data->factor));
     printf(" ");
 
     if ( data->permutations.size() > 0 ) {
@@ -212,94 +142,26 @@ void pq::print() {
         }
         printf(" ");
     }
-    for (size_t i = 0; i < delta1.size(); i++) {
-        printf("d(%s,%s)",delta1[i].c_str(),delta2[i].c_str());
-        printf(" ");
+
+    // print deltas
+    for (size_t i = 0; i < data->deltas.size(); i++) {
+        data->deltas[i].print();
     }
 
-    // two-electron integrals
-    if ( data->tensor.size() == 4 ) {
-
-        if ( data->tensor_type == "TWO_BODY") {
-            printf("g(");
-            printf("%s",data->tensor[0].c_str());
-            printf(",");
-            printf("%s",data->tensor[1].c_str());
-            printf(",");
-            printf("%s",data->tensor[2].c_str());
-            printf(",");
-            printf("%s",data->tensor[3].c_str());
-            printf(")");
-            printf(" ");
-        }else {
-            // dirac
-            printf("<");
-            printf("%s",data->tensor[0].c_str());
-            printf(",");
-            printf("%s",data->tensor[1].c_str());
-            printf("||");
-            printf("%s",data->tensor[2].c_str());
-            printf(",");
-            printf("%s",data->tensor[3].c_str());
-            printf(">");
-            printf(" ");
+    // print integrals
+    for (size_t i = 0; i < data->integral_types.size(); i++) { 
+        std::string type = data->integral_types[i];
+        for (size_t j = 0; j < data->ints[type].size(); j++) { 
+            data->ints[type][j].print(type);
         }
     }
 
-    // one-electron integrals
-    if ( data->tensor.size() == 2 ) {
-        if ( data->tensor_type == "CORE") {
-            printf("h(");
-        }else if ( data->tensor_type == "FOCK") {
-            printf("f(");
-        }else if ( data->tensor_type == "D+") {
-            printf("d+(");
-        }else if ( data->tensor_type == "D-") {
-            printf("d-(");
+    // print amplitudes
+    for (size_t i = 0; i < data->amplitude_types.size(); i++) { 
+        char type = data->amplitude_types[i];
+        for (size_t j = 0; j < data->amps[type].size(); j++) { 
+            data->amps[type][j].print(type);
         }
-        printf("%s",data->tensor[0].c_str());
-        printf(",");
-        printf("%s",data->tensor[1].c_str());
-        printf(")");
-        printf(" ");
-    }
-
-    // left-hand amplitudes
-    print_amplitudes("l",data->left_amplitudes);
-    if ( data->has_l0 ) {
-        printf("l0");
-        printf(" ");
-    }
-
-    // right-hand amplitudes
-    print_amplitudes("r",data->right_amplitudes);
-    if ( data->has_r0 ) {
-        printf("r0");
-        printf(" ");
-    }
-
-    // t_amplitudes
-    print_amplitudes("t",data->t_amplitudes);
-
-    // u_amplitudes
-    print_amplitudes("u",data->u_amplitudes);
-    if ( data->has_u0 ) {
-        printf("u0");
-        printf(" ");
-    }
-
-    // m_amplitudes
-    print_amplitudes("m",data->m_amplitudes);
-    if ( data->has_m0 ) {
-        printf("m0");
-        printf(" ");
-    }
-
-    // s_amplitudes
-    print_amplitudes("s",data->s_amplitudes);
-    if ( data->has_s0 ) {
-        printf("s0");
-        printf(" ");
     }
 
     // bosons:
@@ -314,48 +176,91 @@ void pq::print() {
         printf("w0");
         printf(" ");
     }
-/*
-    if ( data->has_b ) {
-        printf("b-");
-        printf(" ");
-    }
-    if ( data->has_b_dagger ) {
-        printf("b+");
-        printf(" ");
-    }
-*/
+
     printf("\n");
 }
 
-void pq::print_amplitudes_to_string(std::string label, 
-                                    std::vector<std::vector<std::string> > amplitudes, 
-                                    std::vector<std::string> &my_string ) {
+std::vector<std::string> pq::get_string_with_spin() {
 
-    if ( amplitudes.size() == 0 ) {
-        return;
-    }
-    
-    for (size_t i = 0; i < amplitudes.size(); i++) {
-        
-        if ( amplitudes[i].size() > 0 ) {
-            
-            size_t size  = amplitudes[i].size();
-            size_t order = amplitudes[i].size() / 2;
-            if ( 2*order != size ) {
-                order++;
-            }
-            std::string tmp = label + std::to_string(order) + "(";
-            for (int j = 0; j < size-1; j++) {
-                tmp += amplitudes[i][j] + ",";
-            }
-            tmp += amplitudes[i][size-1] + ")";
-            my_string.push_back(tmp);
-        
+    std::vector<std::string> my_string;
+
+    if ( skip ) return my_string;
+
+    if ( vacuum == "FERMI" && symbol.size() > 0 ) {
+        // check if stings should be zero or not
+        bool is_dagger_right = is_dagger_fermi[symbol.size()-1];
+        bool is_dagger_left  = is_dagger_fermi[0];
+        if ( !is_dagger_right || is_dagger_left ) {
+            //return;
         }
-
     }
-}
 
+    std::string tmp;
+    if ( sign > 0 ) {
+        tmp = "+";
+    }else {
+        tmp = "-";
+    }
+    //my_string.push_back(tmp + std::to_string(fabs(data->factor)));
+    my_string.push_back(tmp + to_string_with_precision(fabs(data->factor),14));
+
+    if ( data->permutations.size() > 0 ) {
+        // should have an even number of symbols...how many pairs?
+        size_t n = data->permutations.size() / 2;
+        size_t count = 0;
+        for (size_t i = 0; i < n; i++) {
+            tmp  = "P(";
+            tmp += data->permutations[count++];
+            tmp += ",";
+            tmp += data->permutations[count++];
+            tmp += ")";
+            my_string.push_back(tmp);
+        }
+    }
+
+    for (size_t i = 0; i < symbol.size(); i++) {
+        std::string tmp = symbol[i];
+        if ( is_dagger[i] ) {
+            tmp += "*";
+        }
+        my_string.push_back(tmp);
+    }
+
+    // deltas
+    for (size_t i = 0; i < data->deltas.size(); i++) {
+        my_string.push_back( data->deltas[i].to_string_with_spin() );
+    }
+
+    // integrals
+    for (size_t i = 0; i < data->integral_types.size(); i++) { 
+        std::string type = data->integral_types[i];
+        for (size_t j = 0; j < data->ints[type].size(); j++) { 
+            my_string.push_back( data->ints[type][j].to_string_with_spin(type) );
+        }
+    }
+
+    // amplitudes
+    for (size_t i = 0; i < data->amplitude_types.size(); i++) { 
+        char type = data->amplitude_types[i];
+        for (size_t j = 0; j < data->amps[type].size(); j++) { 
+            my_string.push_back( data->amps[type][j].to_string_with_spin(type));
+        }
+    }
+
+    // bosons:
+    for (size_t i = 0; i < data->is_boson_dagger.size(); i++) {
+        if ( data->is_boson_dagger[i] ) {
+            my_string.push_back("B*");
+        }else {
+            my_string.push_back("B");
+        }
+    }
+    if ( data->has_w0 ) {
+        my_string.push_back("w0");
+    }
+
+    return my_string;
+}
 std::vector<std::string> pq::get_string() {
 
     std::vector<std::string> my_string;
@@ -402,90 +307,25 @@ std::vector<std::string> pq::get_string() {
         my_string.push_back(tmp);
     }
 
-    for (size_t i = 0; i < delta1.size(); i++) {
-        std::string tmp = "d(" + delta1[i] + "," + delta2[i] + ")";
-        my_string.push_back(tmp);
+    // deltas
+    for (size_t i = 0; i < data->deltas.size(); i++) {
+        my_string.push_back( data->deltas[i].to_string() );
     }
 
-    // two-electron integrals
-    if ( data->tensor.size() == 4 ) {
-
-        if ( data->tensor_type == "TWO_BODY") {
-            std::string tmp = "g("
-                            + data->tensor[0]
-                            + ","
-                            + data->tensor[1]
-                            + ","
-                            + data->tensor[2]
-                            + ","
-                            + data->tensor[3]
-                            + ")";
-            my_string.push_back(tmp);
-        }else {
-            // dirac
-            std::string tmp = "<"
-                            + data->tensor[0]
-                            + ","
-                            + data->tensor[1]
-                            + "||"
-                            + data->tensor[2]
-                            + ","
-                            + data->tensor[3]
-                            + ">";
-            my_string.push_back(tmp);
+    // integrals
+    for (size_t i = 0; i < data->integral_types.size(); i++) { 
+        std::string type = data->integral_types[i];
+        for (size_t j = 0; j < data->ints[type].size(); j++) { 
+            my_string.push_back( data->ints[type][j].to_string(type) );
         }
     }
 
-    // one-electron integrals
-    if ( data->tensor.size() == 2 ) {
-        std::string tmp;
-        if ( data->tensor_type == "CORE") {
-            tmp = "h(";
-        }else if ( data->tensor_type == "FOCK") {
-            tmp = "f(";
-        }else if ( data->tensor_type == "D+") {
-            tmp = "d+(";
-        }else if ( data->tensor_type == "D-") {
-            tmp = "d-(";
+    // amplitudes
+    for (size_t i = 0; i < data->amplitude_types.size(); i++) { 
+        char type = data->amplitude_types[i];
+        for (size_t j = 0; j < data->amps[type].size(); j++) { 
+            my_string.push_back( data->amps[type][j].to_string(type) );
         }
-        tmp += data->tensor[0]
-             + ","
-             + data->tensor[1]
-             + ")";
-        my_string.push_back(tmp);
-    }
-
-    // left-hand amplitudes
-    print_amplitudes_to_string("l",data->left_amplitudes,my_string);
-    if ( data->has_l0 ) {
-        my_string.push_back("l0");
-    }
-
-    // right-hand amplitudes
-    print_amplitudes_to_string("r",data->right_amplitudes,my_string);
-    if ( data->has_r0 ) {
-        my_string.push_back("r0");
-    }
-
-    // t_amplitudes
-    print_amplitudes_to_string("t",data->t_amplitudes,my_string);
-
-    // u_amplitudes
-    print_amplitudes_to_string("u",data->u_amplitudes,my_string);
-    if ( data->has_u0 ) {
-        my_string.push_back("u0");
-    }
-
-    // m_amplitudes
-    print_amplitudes_to_string("m",data->m_amplitudes,my_string);
-    if ( data->has_m0 ) {
-        my_string.push_back("m0");
-    }
-
-    // s_amplitudes
-    print_amplitudes_to_string("s",data->s_amplitudes,my_string);
-    if ( data->has_s0 ) {
-        my_string.push_back("s0");
     }
 
     // bosons:
@@ -499,14 +339,6 @@ std::vector<std::string> pq::get_string() {
     if ( data->has_w0 ) {
         my_string.push_back("w0");
     }
-/*
-    if ( data->has_b ) {
-        my_string.push_back("b-");
-    }
-    if ( data->has_b_dagger ) {
-        my_string.push_back("b+");
-    }
-*/
 
     return my_string;
 }
@@ -630,13 +462,13 @@ void pq::alphabetize(std::vector<std::shared_ptr<pq> > &ordered) {
 
     // alphabetize deltas
     for (size_t i = 0; i < ordered.size(); i++) {
-        for (size_t j = 0; j < ordered[i]->delta1.size(); j++) {
-            int val1 = ordered[i]->delta1[j].c_str()[0];
-            int val2 = ordered[i]->delta2[j].c_str()[0];
+        for (size_t j = 0; j < ordered[i]->data->deltas.size(); j++) {
+            int val1 = ordered[i]->data->deltas[j].labels[0].c_str()[0];
+            int val2 = ordered[i]->data->deltas[j].labels[1].c_str()[0];
             if ( val2 < val1 ) {
-                std::string dum = ordered[i]->delta1[j];
-                ordered[i]->delta1[j] = ordered[i]->delta2[j];
-                ordered[i]->delta2[j] = dum;
+                std::string dum = ordered[i]->data->deltas[j].labels[0];
+                ordered[i]->data->deltas[j].labels[0] = ordered[i]->data->deltas[j].labels[1];
+                ordered[i]->data->deltas[j].labels[1] = dum;
             }
         }
     }
@@ -647,11 +479,12 @@ void pq::swap_two_labels(std::string label1, std::string label2) {
     replace_index_everywhere(label1,"x");
     replace_index_everywhere(label2,label1);
     replace_index_everywhere("x",label2);
+
 }
 
 void pq::reorder_t_amplitudes() {
 
-    size_t dim = data->t_amplitudes.size();
+    size_t dim = data->amps['t'].size();
 
     if ( dim == 0 ) return;
 
@@ -660,85 +493,24 @@ void pq::reorder_t_amplitudes() {
 
     std::vector<std::vector<std::string> > tmp;
 
-    // t1 first
-    for (int i = 0; i < dim; i++) {
-        for (int j = 0; j < dim; j++) {
-            if ( nope[j] ) continue;
+    std::vector<amplitudes> tmp_new;
 
-            if ( data->t_amplitudes[j].size() == 2 ) {
-                tmp.push_back(data->t_amplitudes[j]);
-                nope[j] = true;
-                break;
+    for (size_t order = 1; order < 7; order++) {
+        for (int i = 0; i < dim; i++) {
+            for (int j = 0; j < dim; j++) {
+                if ( nope[j] ) continue;
+
+                if ( data->amps['t'][j].labels.size() == 2 * order ) {
+                    tmp_new.push_back(data->amps['t'][j]);
+                    nope[j] = true;
+                    break;
+                }
+
             }
         }
-
     }
-    // now t2
-    for (int i = 0; i < dim; i++) {
-        for (int j = 0; j < dim; j++) {
-            if ( nope[j] ) continue;
 
-            if ( data->t_amplitudes[j].size() == 4 ) {
-                tmp.push_back(data->t_amplitudes[j]);
-                nope[j] = true;
-                break;
-            }
-        }
-
-    }
-    // now t3
-    for (int i = 0; i < dim; i++) {
-        for (int j = 0; j < dim; j++) {
-            if ( nope[j] ) continue;
-
-            if ( data->t_amplitudes[j].size() == 6 ) {
-                tmp.push_back(data->t_amplitudes[j]);
-                nope[j] = true;
-                break;
-            }
-        }
-
-    }
-    // now t4
-    for (int i = 0; i < dim; i++) {
-        for (int j = 0; j < dim; j++) {
-            if ( nope[j] ) continue;
-
-            if ( data->t_amplitudes[j].size() == 8 ) {
-                tmp.push_back(data->t_amplitudes[j]);
-                nope[j] = true;
-                break;
-            }
-        }
-
-    }
-    // now t5
-    for (int i = 0; i < dim; i++) {
-        for (int j = 0; j < dim; j++) {
-            if ( nope[j] ) continue;
-
-            if ( data->t_amplitudes[j].size() == 10 ) {
-                tmp.push_back(data->t_amplitudes[j]);
-                nope[j] = true;
-                break;
-            }
-        }
-
-    }
-    // now t6
-    for (int i = 0; i < dim; i++) {
-        for (int j = 0; j < dim; j++) {
-            if ( nope[j] ) continue;
-
-            if ( data->t_amplitudes[j].size() == 12 ) {
-                tmp.push_back(data->t_amplitudes[j]);
-                nope[j] = true;
-                break;
-            }
-        }
-
-    }
-    if ( dim != tmp.size() ) { 
+    if ( dim != tmp_new.size() ) { 
         printf("\n");
         printf("    something went very wrong in reorder_t_amplitudes()\n");
         printf("    this function breaks for t6 and higher. why would\n");
@@ -748,24 +520,882 @@ void pq::reorder_t_amplitudes() {
     }
 
     for (int i = 0; i < dim; i++) {
-        data->t_amplitudes[i].clear();
+        data->amps['t'][i].labels.clear();
+        data->amps['t'][i].numerical_labels.clear();
     }
-    data->t_amplitudes.clear();
-    for (size_t i = 0; i < tmp.size(); i++) {
-        data->t_amplitudes.push_back(tmp[i]);
+    data->amps['t'].clear();
+    for (size_t i = 0; i < tmp_new.size(); i++) {
+        data->amps['t'].push_back(tmp_new[i]);
     }
 
     free(nope);
     
 }
 
+// sort amplitude and integral labels
+void pq::sort_labels() {
+
+    for (size_t i = 0; i < data->integral_types.size(); i++) { 
+        std::string type = data->integral_types[i];
+        for (size_t j = 0; j < data->ints[type].size(); j++) {
+            data->ints[type][j].sort();
+        }
+    }
+    for (size_t i = 0; i < data->amplitude_types.size(); i++) { 
+        char type = data->amplitude_types[i];
+        for (size_t j = 0; j < data->amps[type].size(); j++) {
+            data->amps[type][j].sort();
+        }
+    }
+    for (size_t i = 0; i < data->deltas.size(); i++) { 
+        data->deltas[i].sort();
+    }
+
+}
+
+// reset spin labels
+void pq::reset_spin_labels() {
+ 
+    // amplitudes
+    for (size_t i = 0; i < data->amplitude_types.size(); i++) {
+        char type = data->amplitude_types[i];
+        for (size_t j = 0; j < data->amps[type].size(); j++) {
+            data->amps[type][j].spin_labels.clear();
+            for (size_t k = 0; k < data->amps[type][j].labels.size(); k++) {
+                data->amps[type][j].spin_labels.push_back("");
+            }
+        }
+    }
+    // integrals
+    for (size_t i = 0; i < data->integral_types.size(); i++) {
+        std::string type = data->integral_types[i];
+        for (size_t j = 0; j < data->ints[type].size(); j++) {
+            data->ints[type][j].spin_labels.clear();
+            for (size_t k = 0; k < data->ints[type][j].labels.size(); k++) {
+                data->ints[type][j].spin_labels.push_back("");
+            }
+        }
+    }
+    // deltas
+    for (size_t i = 0; i < data->deltas.size(); i++) {
+        data->deltas[i].spin_labels.clear();
+        for (size_t j = 0; j < data->deltas[i].labels.size(); j++) {
+            data->deltas[i].spin_labels.push_back("");
+        }
+    }
+
+    std::vector<std::string> occ_labels { "i", "j", "k", "l", "m", "n", "o" };
+    std::vector<std::string> vir_labels { "a", "b", "c", "d", "e", "f", "g" };
+
+    // set spins for occupied non-summed labels
+    for (size_t label = 0; label < occ_labels.size(); label++) {
+        std::string spin = data->non_summed_spin_labels[occ_labels[label]];
+        if ( spin == "a" || spin == "b" ) {
+            // amplitudes
+            for (size_t i = 0; i < data->amplitude_types.size(); i++) {
+                char type = data->amplitude_types[i];
+                for (size_t j = 0; j < data->amps[type].size(); j++) {
+                    for (size_t k = 0; k < data->amps[type][j].labels.size(); k++) {
+                        if ( data->amps[type][j].labels[k] == occ_labels[label] ) {
+                            data->amps[type][j].spin_labels[k] = spin;
+                        }
+                    }
+                }
+            }
+            // integrals
+            for (size_t i = 0; i < data->integral_types.size(); i++) {
+                std::string type = data->integral_types[i];
+                for (size_t j = 0; j < data->ints[type].size(); j++) {
+                    for (size_t k = 0; k < data->ints[type][j].labels.size(); k++) {
+                        if ( data->ints[type][j].labels[k] == occ_labels[label] ) {
+                            data->ints[type][j].spin_labels[k] = spin;
+                        }
+                    }
+                }
+            }
+            // deltas
+            for (size_t i = 0; i < data->deltas.size(); i++) {
+                for (size_t j = 0; j < data->deltas[i].labels.size(); j++) {
+                    if ( data->deltas[i].labels[j] == occ_labels[label] ) {
+                        data->deltas[i].spin_labels[j] = spin;
+                    }
+                }
+            }
+        }
+    }
+
+    // set spins for virtual non-summed labels
+    for (size_t label = 0; label < vir_labels.size(); label++) {
+        std::string spin = data->non_summed_spin_labels[vir_labels[label]];
+        if ( spin == "a" || spin == "b" ) {
+            // amplitudes
+            for (size_t i = 0; i < data->amplitude_types.size(); i++) {
+                char type = data->amplitude_types[i];
+                for (size_t j = 0; j < data->amps[type].size(); j++) {
+                    for (size_t k = 0; k < data->amps[type][j].labels.size(); k++) {
+                        if ( data->amps[type][j].labels[k] == vir_labels[label] ) {
+                            data->amps[type][j].spin_labels[k] = spin;
+                        }
+                    }
+                }
+            }
+            // integrals
+            for (size_t i = 0; i < data->integral_types.size(); i++) {
+                std::string type = data->integral_types[i];
+                for (size_t j = 0; j < data->ints[type].size(); j++) {
+                    for (size_t k = 0; k < data->ints[type][j].labels.size(); k++) {
+                        if ( data->ints[type][j].labels[k] == vir_labels[label] ) {
+                            data->ints[type][j].spin_labels[k] = spin;
+                        }
+                    }
+                }
+            }
+            // deltas
+            for (size_t i = 0; i < data->deltas.size(); i++) {
+                for (size_t j = 0; j < data->deltas[i].labels.size(); j++) {
+                    if ( data->deltas[i].labels[j] == vir_labels[label] ) {
+                        data->deltas[i].spin_labels[j] = spin;
+                    }   
+                }   
+            }
+        }
+    }
+}
+
+// expand sums to include spin and zero terms where appropriate
+void pq::spin_blocking(std::vector<std::shared_ptr<pq> > &spin_blocked, std::map<std::string, std::string> spin_map) {
+
+    // check that non-summed spin labels match those specified
+    std::vector<std::string> occ_labels { "i", "j", "k", "l", "m", "n", "o" };
+    std::vector<std::string> vir_labels { "a", "b", "c", "d", "e", "f", "g" };
+
+    std::map<std::string, bool> found_labels;
+    
+    // ok, what non-summed labels do we have in the occupied space? 
+    for (size_t j = 0; j < occ_labels.size(); j++) {
+        int found = index_in_anywhere(occ_labels[j]);
+        if ( found == 1 ) {
+            found_labels[occ_labels[j]] = true;
+        }else{
+            found_labels[occ_labels[j]] = false;
+        }
+    }
+    
+    // ok, what non-summed labels do we have in the virtual space? 
+    for (size_t j = 0; j < vir_labels.size(); j++) {
+        int found = index_in_anywhere(vir_labels[j]);
+        if ( found == 1 ) {
+            found_labels[vir_labels[j]] = true;
+        }else{
+            found_labels[vir_labels[j]] = false;
+        }
+    }
+
+    for (size_t j = 0; j < occ_labels.size(); j++) {
+        if ( found_labels[occ_labels[j]] ) {
+            if ( spin_map[occ_labels[j]] != "a" && spin_map[occ_labels[j]] != "b" ) {
+                printf("\n");
+                printf("    error: spin label for non-summed index %s is invalid\n", occ_labels[j].c_str());
+                printf("\n");
+                exit(1);
+            }
+        }
+    }
+    for (size_t j = 0; j < vir_labels.size(); j++) {
+        if ( found_labels[vir_labels[j]] ) {
+            if ( spin_map[vir_labels[j]] != "a" && spin_map[vir_labels[j]] != "b" ) {
+                printf("\n");
+                printf("    error: spin label for non-summed index %s is invalid\n", vir_labels[j].c_str());
+                printf("\n");
+                exit(1);
+            }
+        }
+    }
+
+    // non-summed spin labels
+    data->non_summed_spin_labels = spin_map;
+
+    // copy this term and zero spins
+
+    std::shared_ptr<pq> newguy (new pq(vacuum));
+    newguy->copy((void*)this);
+
+    newguy->reset_spin_labels();
+
+    // list of expanded sums
+    std::vector< std::shared_ptr<pq> > tmp;
+    tmp.push_back(newguy);
+
+    for (size_t i = 0; i < tmp.size(); i++) {
+
+        // but first expand permutations where spins don't match 
+        size_t n = tmp[i]->data->permutations.size() / 2;
+
+        for (size_t j = 0; j < n; j++) {
+
+            std::string idx1 = tmp[i]->data->permutations[2*j];
+            std::string idx2 = tmp[i]->data->permutations[2*j+1];
+
+            // spin 1
+            std::string spin1 = "";
+            spin1 = tmp[i]->data->non_summed_spin_labels[idx1];
+
+            // spin 2
+            std::string spin2 = "";
+            spin2 = tmp[i]->data->non_summed_spin_labels[idx2];
+
+            // if spins are not the same, then the permutation needs to be expanded explicitly and allowed spins redetermined
+            if ( spin1 != spin2 ) {
+
+                // first guy is just a copy
+                std::shared_ptr<pq> newguy1 (new pq(vacuum));
+                newguy1->copy((void*)tmp[i].get());
+
+                // second guy is a copy with permuted labels and change in sign
+                std::shared_ptr<pq> newguy2 (new pq(vacuum));
+                newguy2->copy((void*)tmp[i].get());
+                newguy2->swap_two_labels(idx1, idx2);
+                newguy2->sign *= -1;
+
+                // reset non-summed spins for this guy
+                newguy2->reset_spin_labels();
+
+                // both guys need to have permutation lists adjusted
+                newguy1->data->permutations.clear();
+                newguy2->data->permutations.clear();
+
+                for (size_t k = 0; k < n; k++) {
+
+                    // skip jth permutation, which is the one we expanded
+                    if ( j == k ) continue;
+
+                    newguy1->data->permutations.push_back(tmp[i]->data->permutations[2*k]);
+                    newguy1->data->permutations.push_back(tmp[i]->data->permutations[2*k+1]);
+
+                    newguy2->data->permutations.push_back(tmp[i]->data->permutations[2*k]);
+                    newguy2->data->permutations.push_back(tmp[i]->data->permutations[2*k+1]);
+                }
+
+                tmp[i]->skip = true;
+                tmp.push_back(newguy1);
+                tmp.push_back(newguy2);
+
+                // break loop over permutations because this above logic only works on one permutation at a time
+                break;
+            }
+        }
+    }
+
+    // now, expand sums 
+
+    bool done_adding_spins = false;
+    do {
+        std::vector< std::shared_ptr<pq> > list;
+        done_adding_spins = true;
+        for (size_t i = 0; i < tmp.size(); i++) {
+            bool am_i_done = tmp[i]->add_spins(list);
+            if ( !am_i_done ) done_adding_spins = false;
+        }
+        if ( !done_adding_spins ) {
+            tmp.clear();
+            for (size_t i = 0; i < list.size(); i++) {
+                if ( !list[i]->skip ) {
+                    tmp.push_back(list[i]);
+                }
+            }
+        }
+    }while(!done_adding_spins);
+
+
+    // kill terms that have mismatched spin 
+    for (size_t i = 0; i < tmp.size(); i++) {
+
+        if ( tmp[i]->skip ) continue;
+
+        bool killit = false;
+
+        // amplitudes
+        // TODO: this logic only works for particle-conserving amplitudes
+        for (size_t j = 0; j < data->amplitude_types.size(); j++) {
+            char type = data->amplitude_types[j];
+            for (size_t k = 0; k < tmp[i]->data->amps[type].size(); k++) {
+
+                size_t order = tmp[i]->data->amps[type][k].labels.size()/2;
+
+                int left_a = 0;
+                int left_b = 0;
+                int right_a = 0;
+                int right_b = 0;
+                for (size_t l = 0; l < order; l++) {
+                    if ( tmp[i]->data->amps[type][k].spin_labels[l] == "a" ) {
+                        left_a++;
+                    }else {
+                        left_b++;
+                    }
+                    if ( tmp[i]->data->amps[type][k].spin_labels[l+order] == "a" ) {
+                        right_a++;
+                    }else {
+                        right_b++;
+                    }
+                }
+                if (left_a != right_a || left_b != right_b ) {
+                    killit = true;
+                    break;
+                }
+
+            }
+            if ( killit ) break;
+        }
+        if ( killit ) {
+            tmp[i]->skip = true;
+            continue;
+        }
+
+        killit = false;
+
+        // integrals
+        for (size_t j = 0; j < data->integral_types.size(); j++) {
+            std::string type = data->integral_types[j];
+            for (size_t k = 0; k < tmp[i]->data->ints[type].size(); k++) {
+                size_t order = tmp[i]->data->ints[type][k].labels.size()/2;
+
+                int left_a = 0;
+                int left_b = 0;
+                int right_a = 0;
+                int right_b = 0;
+                for (size_t l = 0; l < order; l++) {
+                    if ( tmp[i]->data->ints[type][k].spin_labels[l] == "a" ) {
+                        left_a++;
+                    }else {
+                        left_b++;
+                    }
+                    if ( tmp[i]->data->ints[type][k].spin_labels[l+order] == "a" ) {
+                        right_a++;
+                    }else {
+                        right_b++;
+                    }
+                }
+                if (left_a != right_a || left_b != right_b ) {
+                    killit = true;
+                    break;
+                }
+
+            }
+            if ( killit ) break;
+        }
+        if ( killit ) {
+            tmp[i]->skip = true;
+            continue;
+        }
+
+        killit = false;
+
+        // delta functions 
+        for (size_t j = 0; j < data->deltas.size(); j++) {
+            if ( tmp[i]->data->deltas[j].spin_labels[0] != tmp[i]->data->deltas[j].spin_labels[1] ) {
+                killit = true;
+                break;
+            }
+        }
+
+        if ( killit ) {
+            tmp[i]->skip = true;
+            continue;
+        }
+    }
+
+    
+    // rearrange terms so that they have standard spin order (abba -> -abab, etc.)
+    for (size_t p = 0; p < tmp.size(); p++) {
+
+        if ( tmp[p]->skip ) continue;
+
+        // amplitudes
+        for (size_t i = 0; i < data->amplitude_types.size(); i++) {
+            char type = data->amplitude_types[i];
+            for (size_t j = 0; j < tmp[p]->data->amps[type].size(); j++) {
+                size_t order = tmp[p]->data->amps[type][j].labels.size()/2;
+                if ( order > 4 ) {
+                    printf("\n");
+                    printf("    error: spin tracing doesn't work for higher than quadruples yet\n");
+                    printf("\n");
+                    exit(1);
+                }
+                if ( order == 2 ) {
+
+                    // three cases that require attention: ab;ba, ba;ab, and ba;ba
+
+                    if (       tmp[p]->data->amps[type][j].spin_labels[0] == "a"
+                            && tmp[p]->data->amps[type][j].spin_labels[1] == "b"
+                            && tmp[p]->data->amps[type][j].spin_labels[2] == "b"
+                            && tmp[p]->data->amps[type][j].spin_labels[3] == "a" ) {
+
+                            std::string tmp_label = tmp[p]->data->amps[type][j].labels[2];
+                            tmp[p]->data->amps[type][j].labels[2] = tmp[p]->data->amps[type][j].labels[3];
+                            tmp[p]->data->amps[type][j].labels[3] = tmp_label;
+
+                            tmp[p]->data->amps[type][j].spin_labels[2] = "a";
+                            tmp[p]->data->amps[type][j].spin_labels[3] = "b";
+
+                            tmp[p]->sign *= -1;
+
+                    }else if ( tmp[p]->data->amps[type][j].spin_labels[0] == "b"
+                            && tmp[p]->data->amps[type][j].spin_labels[1] == "a"
+                            && tmp[p]->data->amps[type][j].spin_labels[2] == "a"
+                            && tmp[p]->data->amps[type][j].spin_labels[3] == "b" ) {
+
+                            std::string tmp_label = tmp[p]->data->amps[type][j].labels[0];
+                            tmp[p]->data->amps[type][j].labels[0] = tmp[p]->data->amps[type][j].labels[1];
+                            tmp[p]->data->amps[type][j].labels[1] = tmp_label;
+
+                            tmp[p]->data->amps[type][j].spin_labels[0] = "a";
+                            tmp[p]->data->amps[type][j].spin_labels[1] = "b";
+
+                            tmp[p]->sign *= -1;
+
+
+                    }else if ( tmp[p]->data->amps[type][j].spin_labels[0] == "b"
+                            && tmp[p]->data->amps[type][j].spin_labels[1] == "a"
+                            && tmp[p]->data->amps[type][j].spin_labels[2] == "b"
+                            && tmp[p]->data->amps[type][j].spin_labels[3] == "a" ) {
+
+                            std::string tmp_label = tmp[p]->data->amps[type][j].labels[0];
+                            tmp[p]->data->amps[type][j].labels[0] = tmp[p]->data->amps[type][j].labels[1];
+                            tmp[p]->data->amps[type][j].labels[1] = tmp_label;
+
+                            tmp[p]->data->amps[type][j].spin_labels[0] = "a";
+                            tmp[p]->data->amps[type][j].spin_labels[1] = "b";
+
+                            tmp_label = tmp[p]->data->amps[type][j].labels[2];
+                            tmp[p]->data->amps[type][j].labels[2] = tmp[p]->data->amps[type][j].labels[3];
+                            tmp[p]->data->amps[type][j].labels[3] = tmp_label;
+
+                            tmp[p]->data->amps[type][j].spin_labels[2] = "a";
+                            tmp[p]->data->amps[type][j].spin_labels[3] = "b";
+
+                    }
+                }else if ( order == 3 ) {
+
+                    // target order: aaa, aab, abb, bbb
+                    int sign = 1;
+                    reorder_three_spins(tmp[p]->data->amps[type][j], 0, 1, 2, sign);
+                    reorder_three_spins(tmp[p]->data->amps[type][j], 3, 4, 5, sign);
+                    tmp[p]->sign *= sign;
+
+                }else if ( order == 4 ) {
+
+                    // target order: aaaa, aaab, aabb, abbb, bbbb
+                    int sign = 1;
+                    reorder_four_spins(tmp[p]->data->amps[type][j], 0, 1, 2, 3, sign);
+                    reorder_four_spins(tmp[p]->data->amps[type][j], 4, 5, 6, 7, sign);
+                    tmp[p]->sign *= sign;
+
+                }
+            }
+        }
+
+        // integrals
+        for (size_t i = 0; i < data->integral_types.size(); i++) {
+            std::string type = data->integral_types[i];
+            for (size_t j = 0; j < tmp[p]->data->ints[type].size(); j++) {
+
+                size_t order = tmp[p]->data->ints[type][j].labels.size()/2;
+
+                if ( order != 2 ) continue;
+
+                // three cases that require attention: ab;ba, ba;ab, and ba;ba
+
+                // integrals
+                if (       tmp[p]->data->ints[type][j].spin_labels[0] == "a"
+                        && tmp[p]->data->ints[type][j].spin_labels[1] == "b"
+                        && tmp[p]->data->ints[type][j].spin_labels[2] == "b"
+                        && tmp[p]->data->ints[type][j].spin_labels[3] == "a" ) {
+
+                        std::string tmp_label = tmp[p]->data->ints[type][j].labels[2];
+                        tmp[p]->data->ints[type][j].labels[2] = tmp[p]->data->ints[type][j].labels[3];
+                        tmp[p]->data->ints[type][j].labels[3] = tmp_label;
+
+                        tmp[p]->data->ints[type][j].spin_labels[2] = "a";
+                        tmp[p]->data->ints[type][j].spin_labels[3] = "b";
+
+                        tmp[p]->sign *= -1;
+
+                }else if ( tmp[p]->data->ints[type][j].spin_labels[0] == "b"
+                        && tmp[p]->data->ints[type][j].spin_labels[1] == "a"
+                        && tmp[p]->data->ints[type][j].spin_labels[2] == "a"
+                        && tmp[p]->data->ints[type][j].spin_labels[3] == "b" ) {
+
+                        std::string tmp_label = tmp[p]->data->ints[type][j].labels[0];
+                        tmp[p]->data->ints[type][j].labels[0] = tmp[p]->data->ints[type][j].labels[1];
+                        tmp[p]->data->ints[type][j].labels[1] = tmp_label;
+
+                        tmp[p]->data->ints[type][j].spin_labels[0] = "a";
+                        tmp[p]->data->ints[type][j].spin_labels[1] = "b";
+
+                        tmp[p]->sign *= -1;
+
+
+                }else if ( tmp[p]->data->ints[type][j].spin_labels[0] == "b"
+                        && tmp[p]->data->ints[type][j].spin_labels[1] == "a"
+                        && tmp[p]->data->ints[type][j].spin_labels[2] == "b"
+                        && tmp[p]->data->ints[type][j].spin_labels[3] == "a" ) {
+
+                        std::string tmp_label = tmp[p]->data->ints[type][j].labels[0];
+                        tmp[p]->data->ints[type][j].labels[0] = tmp[p]->data->ints[type][j].labels[1];
+                        tmp[p]->data->ints[type][j].labels[1] = tmp_label;
+
+                        tmp[p]->data->ints[type][j].spin_labels[0] = "a";
+                        tmp[p]->data->ints[type][j].spin_labels[1] = "b";
+
+                        tmp_label = tmp[p]->data->ints[type][j].labels[2];
+                        tmp[p]->data->ints[type][j].labels[2] = tmp[p]->data->ints[type][j].labels[3];
+                        tmp[p]->data->ints[type][j].labels[3] = tmp_label;
+
+                        tmp[p]->data->ints[type][j].spin_labels[2] = "a";
+                        tmp[p]->data->ints[type][j].spin_labels[3] = "b";
+
+                }
+            }
+        }
+    }
+
+    // 
+    for (size_t i = 0; i < tmp.size(); i++) {
+        if ( tmp[i]->skip ) continue;
+        spin_blocked.push_back(tmp[i]);
+    }
+
+    tmp.clear();
+
+}
+
+// reorder four spins ... cases to consider: aaba/abaa/baaa -> aaab; baab/abba/baba/bbaa/abab -> aabb; babb/bbab/bbba -> abbb
+
+void pq::reorder_four_spins(amplitudes & amps, int i1, int i2, int i3, int i4, int & sign) {
+
+    // aaba/abaa/baaa -> aaab
+    if (       amps.spin_labels[i1] == "a"
+            && amps.spin_labels[i2] == "a"
+            && amps.spin_labels[i3] == "b" 
+            && amps.spin_labels[i4] == "a" ) {
+
+            std::string tmp_label = amps.labels[i4];
+
+            amps.labels[i4] = amps.labels[i3];
+            amps.labels[i3] = tmp_label;
+
+            amps.spin_labels[i3] = "a";
+            amps.spin_labels[i4] = "b";
+
+            sign *= -1;
+
+    }else if ( amps.spin_labels[i1] == "a"
+            && amps.spin_labels[i2] == "b"
+            && amps.spin_labels[i3] == "a" 
+            && amps.spin_labels[i4] == "a" ) {
+
+            std::string tmp_label = amps.labels[i4];
+
+            amps.labels[i4] = amps.labels[i2];
+            amps.labels[i2] = tmp_label;
+
+            amps.spin_labels[i2] = "a";
+            amps.spin_labels[i4] = "b";
+
+            sign *= -1;
+
+    }else if ( amps.spin_labels[i1] == "b"
+            && amps.spin_labels[i2] == "a"
+            && amps.spin_labels[i3] == "a" 
+            && amps.spin_labels[i4] == "a" ) {
+
+            std::string tmp_label = amps.labels[i4];
+
+            amps.labels[i4] = amps.labels[i1];
+            amps.labels[i1] = tmp_label;
+
+            amps.spin_labels[i1] = "a";
+            amps.spin_labels[i4] = "b";
+
+            sign *= -1;
+
+    // baab/abba/baba/bbaa/abab -> aabb
+    }else if ( amps.spin_labels[i1] == "b"
+            && amps.spin_labels[i2] == "a"
+            && amps.spin_labels[i3] == "a" 
+            && amps.spin_labels[i4] == "b" ) {
+
+            std::string tmp_label = amps.labels[i3];
+
+            amps.labels[i3] = amps.labels[i1];
+            amps.labels[i1] = tmp_label;
+
+            amps.spin_labels[i1] = "a";
+            amps.spin_labels[i3] = "b";
+
+            sign *= -1;
+
+    }else if ( amps.spin_labels[i1] == "a"
+            && amps.spin_labels[i2] == "b"
+            && amps.spin_labels[i3] == "b" 
+            && amps.spin_labels[i4] == "a" ) {
+
+            std::string tmp_label = amps.labels[i4];
+
+            amps.labels[i4] = amps.labels[i2];
+            amps.labels[i2] = tmp_label;
+
+            amps.spin_labels[i2] = "a";
+            amps.spin_labels[i4] = "b";
+
+            sign *= -1;
+
+    }else if ( amps.spin_labels[i1] == "b"
+            && amps.spin_labels[i2] == "a"
+            && amps.spin_labels[i3] == "b" 
+            && amps.spin_labels[i4] == "a" ) {
+
+            std::string tmp_label = amps.labels[i4];
+
+            amps.labels[i4] = amps.labels[i1];
+            amps.labels[i1] = tmp_label;
+
+            amps.spin_labels[i1] = "a";
+            amps.spin_labels[i4] = "b";
+
+            sign *= -1;
+
+    }else if ( amps.spin_labels[i1] == "b"
+            && amps.spin_labels[i2] == "b"
+            && amps.spin_labels[i3] == "a" 
+            && amps.spin_labels[i4] == "a" ) {
+
+            std::string tmp_label = amps.labels[i4];
+
+            amps.labels[i4] = amps.labels[i2];
+            amps.labels[i2] = tmp_label;
+
+            amps.spin_labels[i2] = "a";
+            amps.spin_labels[i4] = "b";
+
+            tmp_label = amps.labels[i3];
+
+            amps.labels[i3] = amps.labels[i1];
+            amps.labels[i1] = tmp_label;
+
+            amps.spin_labels[i1] = "a";
+            amps.spin_labels[i3] = "b";
+
+    }else if ( amps.spin_labels[i1] == "a"
+            && amps.spin_labels[i2] == "b"
+            && amps.spin_labels[i3] == "a"
+            && amps.spin_labels[i4] == "b" ) {
+
+            std::string tmp_label = amps.labels[i3];
+
+            amps.labels[i3] = amps.labels[i2];
+            amps.labels[i2] = tmp_label;
+
+            amps.spin_labels[i2] = "a";
+            amps.spin_labels[i3] = "b";
+
+            sign *= -1;
+
+    // babb/bbab/bbba -> abbb
+    }else if ( amps.spin_labels[i1] == "b"
+            && amps.spin_labels[i2] == "a"
+            && amps.spin_labels[i3] == "b" 
+            && amps.spin_labels[i4] == "b" ) {
+
+            std::string tmp_label = amps.labels[i2];
+
+            amps.labels[i2] = amps.labels[i1];
+            amps.labels[i1] = tmp_label;
+
+            amps.spin_labels[i1] = "a";
+            amps.spin_labels[i2] = "b";
+
+            sign *= -1;
+
+    }else if ( amps.spin_labels[i1] == "b"
+            && amps.spin_labels[i2] == "b"
+            && amps.spin_labels[i3] == "a" 
+            && amps.spin_labels[i4] == "b" ) {
+
+            std::string tmp_label = amps.labels[i3];
+
+            amps.labels[i3] = amps.labels[i1];
+            amps.labels[i1] = tmp_label;
+
+            amps.spin_labels[i1] = "a";
+            amps.spin_labels[i3] = "b";
+
+            sign *= -1;
+
+    }else if ( amps.spin_labels[i1] == "b"
+            && amps.spin_labels[i2] == "b"
+            && amps.spin_labels[i3] == "b" 
+            && amps.spin_labels[i4] == "a" ) {
+
+            std::string tmp_label = amps.labels[i4];
+
+            amps.labels[i4] = amps.labels[i1];
+            amps.labels[i1] = tmp_label;
+
+            amps.spin_labels[i1] = "a";
+            amps.spin_labels[i4] = "b";
+
+            sign *= -1;
+
+    }
+
+}
+
+// reorder three spins ... cases to consider: aba/baa -> aab; bba/bab -> abb
+
+void pq::reorder_three_spins(amplitudes & amps, int i1, int i2, int i3, int & sign) {
+
+    if (       amps.spin_labels[i1] == "a"
+            && amps.spin_labels[i2] == "b"
+            && amps.spin_labels[i3] == "a" ) {
+
+            std::string tmp_label = amps.labels[i3];
+
+            amps.labels[i3] = amps.labels[i2];
+            amps.labels[i2] = tmp_label;
+
+            amps.spin_labels[i2] = "a";
+            amps.spin_labels[i3] = "b";
+
+            sign *= -1;
+
+    }else if ( amps.spin_labels[i1] == "b"
+            && amps.spin_labels[i2] == "a"
+            && amps.spin_labels[i3] == "a" ) {
+
+            std::string tmp_label = amps.labels[i3];
+
+            amps.labels[i3] = amps.labels[i1];
+            amps.labels[i1] = tmp_label;
+
+            amps.spin_labels[i1] = "a";
+            amps.spin_labels[i3] = "b";
+
+            sign *= -1;
+
+    }else if ( amps.spin_labels[i1] == "b"
+            && amps.spin_labels[i2] == "b"
+            && amps.spin_labels[i3] == "a" ) {
+
+            std::string tmp_label = amps.labels[i3];
+
+            amps.labels[i3] = amps.labels[i1];
+            amps.labels[i1] = tmp_label;
+
+            amps.spin_labels[i1] = "a";
+            amps.spin_labels[i3] = "b";
+
+            sign *= -1;
+
+    }else if ( amps.spin_labels[i1] == "b"
+            && amps.spin_labels[i2] == "a"
+            && amps.spin_labels[i3] == "b" ) {
+
+            std::string tmp_label = amps.labels[i2];
+
+            amps.labels[i2] = amps.labels[i1];
+            amps.labels[i1] = tmp_label;
+
+            amps.spin_labels[i1] = "a";
+            amps.spin_labels[i2] = "b";
+
+            sign *= -1;
+
+    }
+
+}
+
+
+bool pq::add_spins(std::vector<std::shared_ptr<pq> > &list) {
+
+    if ( skip ) return true;
+
+    bool all_spins_added = false;
+
+    // amplitudes
+    for (size_t i = 0; i < data->amplitude_types.size(); i++) {
+        char type = data->amplitude_types[i];
+        for (size_t j = 0; j < data->amps[type].size(); j++) {
+            for (size_t k = 0; k < data->amps[type][j].labels.size(); k++) {
+                if ( data->amps[type][j].spin_labels[k] == "" ) {
+
+                    std::shared_ptr<pq> sa (new pq(vacuum));
+                    std::shared_ptr<pq> sb (new pq(vacuum));
+
+                    sa->copy((void*)this);
+                    sb->copy((void*)this);
+
+                    sa->set_spin_everywhere(data->amps[type][j].labels[k], "a");
+                    sb->set_spin_everywhere(data->amps[type][j].labels[k], "b");
+
+                    //sa->data->amps[type][j].spin_labels[k] = "a";
+                    //sb->data->amps[type][j].spin_labels[k] = "b";
+
+                    list.push_back(sa);
+                    list.push_back(sb);
+                    return false;
+
+                }
+            }
+        }
+    }
+
+    // integrals
+    for (size_t i = 0; i < data->integral_types.size(); i++) {
+        std::string type = data->integral_types[i];
+        for (size_t j = 0; j < data->ints[type].size(); j++) {
+            for (size_t k = 0; k < data->ints[type][j].labels.size(); k++) {
+                if ( data->ints[type][j].spin_labels[k] == "" ) {
+
+                    std::shared_ptr<pq> sa (new pq(vacuum));
+                    std::shared_ptr<pq> sb (new pq(vacuum));
+
+                    sa->copy((void*)this);
+                    sb->copy((void*)this);
+
+                    sa->set_spin_everywhere(data->ints[type][j].labels[k], "a");
+                    sb->set_spin_everywhere(data->ints[type][j].labels[k], "b");
+
+                    //sa->data->ints[type][j].spin_labels[k] = "a";
+                    //sb->data->ints[type][j].spin_labels[k] = "b";
+
+                    list.push_back(sa);
+                    list.push_back(sb);
+                    return false;
+
+                }
+            }
+        }
+    }
+
+    // must be done.
+    return true;
+
+}
+
 // compare strings and remove terms that cancel
 
 void pq::cleanup(std::vector<std::shared_ptr<pq> > &ordered) {
 
-    // order amplitudes such that they're ordered t1, t2, t3, etc.
+
     for (size_t i = 0; i < ordered.size(); i++) {
+
+        // order amplitudes such that they're ordered t1, t2, t3, etc.
         ordered[i]->reorder_t_amplitudes();
+
+        // sort amplitude labels
+        ordered[i]->sort_labels();
+
     }
 
     // prune list so it only contains non-skipped ones
@@ -862,7 +1492,7 @@ void pq::cleanup(std::vector<std::shared_ptr<pq> > &ordered) {
     pruned.clear();
     for (size_t i = 0; i < ordered.size(); i++) {
 
-        if ( ordered[i]-> skip ) continue;
+        if ( ordered[i]->skip ) continue;
 
         // for normal order relative to fermi vacuum, i doubt anyone will care 
         // about terms that aren't fully contracted. so, skip those because this
@@ -938,6 +1568,7 @@ void pq::consolidate_permutations_non_summed(
                     std::shared_ptr<pq> newguy (new pq(vacuum));
                     newguy->copy((void*)(ordered[i].get()));
                     newguy->swap_two_labels(labels[id1],labels[id2]);
+
                     strings_same = compare_strings(ordered[j],newguy,n_permute);
 
                     if ( strings_same ) {
@@ -1115,6 +1746,7 @@ void pq::consolidate_permutations_plus_eight_swaps(
                                                                             newguy->swap_two_labels(labels_6[id11],labels_6[id12]);
                                                                             newguy->swap_two_labels(labels_7[id13],labels_7[id14]);
                                                                             newguy->swap_two_labels(labels_8[id15],labels_8[id16]);
+                                                                            newguy->sort_labels();
                                                                             strings_same = compare_strings(ordered[j],newguy,n_permute);
 
                                                                             if ( strings_same ) break;
@@ -1176,6 +1808,7 @@ void pq::consolidate_permutations_plus_eight_swaps(
         }
     }
 }
+
 // consolidate terms that differ by seven summed labels plus permutations
 void pq::consolidate_permutations_plus_seven_swaps(
     std::vector<std::shared_ptr<pq> > &ordered,
@@ -1299,6 +1932,7 @@ void pq::consolidate_permutations_plus_seven_swaps(
                                                                     newguy->swap_two_labels(labels_5[id9],labels_5[id10]);
                                                                     newguy->swap_two_labels(labels_6[id11],labels_6[id12]);
                                                                     newguy->swap_two_labels(labels_7[id13],labels_7[id14]);
+                                                                    newguy->sort_labels();
                                                                     strings_same = compare_strings(ordered[j],newguy,n_permute);
 
                                                                     if ( strings_same ) break;
@@ -1356,6 +1990,7 @@ void pq::consolidate_permutations_plus_seven_swaps(
         }
     }
 }
+
 // consolidate terms that differ by six summed labels plus permutations
 void pq::consolidate_permutations_plus_six_swaps(
     std::vector<std::shared_ptr<pq> > &ordered,
@@ -1464,6 +2099,7 @@ void pq::consolidate_permutations_plus_six_swaps(
                                                             newguy->swap_two_labels(labels_4[id7],labels_4[id8]);
                                                             newguy->swap_two_labels(labels_5[id9],labels_5[id10]);
                                                             newguy->swap_two_labels(labels_6[id11],labels_6[id12]);
+                                                            newguy->sort_labels();
                                                             strings_same = compare_strings(ordered[j],newguy,n_permute);
 
                                                             if ( strings_same ) break;
@@ -1517,6 +2153,7 @@ void pq::consolidate_permutations_plus_six_swaps(
         }
     }
 }
+
 // consolidate terms that differ by five summed labels plus permutations
 void pq::consolidate_permutations_plus_five_swaps(
     std::vector<std::shared_ptr<pq> > &ordered,
@@ -1610,6 +2247,7 @@ void pq::consolidate_permutations_plus_five_swaps(
                                                     newguy->swap_two_labels(labels_3[id5],labels_3[id6]);
                                                     newguy->swap_two_labels(labels_4[id7],labels_4[id8]);
                                                     newguy->swap_two_labels(labels_5[id9],labels_5[id10]);
+                                                    newguy->sort_labels();
                                                     strings_same = compare_strings(ordered[j],newguy,n_permute);
 
                                                     if ( strings_same ) break;
@@ -1738,6 +2376,7 @@ void pq::consolidate_permutations_plus_four_swaps(
                                             newguy->swap_two_labels(labels_2[id3],labels_2[id4]);
                                             newguy->swap_two_labels(labels_3[id5],labels_3[id6]);
                                             newguy->swap_two_labels(labels_4[id7],labels_4[id8]);
+                                            newguy->sort_labels();
                                             strings_same = compare_strings(ordered[j],newguy,n_permute);
 
                                             if ( strings_same ) break;
@@ -1847,6 +2486,7 @@ void pq::consolidate_permutations_plus_three_swaps(
                                     newguy->swap_two_labels(labels_1[id1],labels_1[id2]);
                                     newguy->swap_two_labels(labels_2[id3],labels_2[id4]);
                                     newguy->swap_two_labels(labels_3[id5],labels_3[id6]);
+                                    newguy->sort_labels();
                                     strings_same = compare_strings(ordered[j],newguy,n_permute);
 
                                     if ( strings_same ) break;
@@ -1937,6 +2577,8 @@ void pq::consolidate_permutations_plus_two_swaps(
                             newguy->copy((void*)(ordered[i].get()));
                             newguy->swap_two_labels(labels_1[id1],labels_1[id2]);
                             newguy->swap_two_labels(labels_2[id3],labels_2[id4]);
+                            newguy->sort_labels();
+
                             strings_same = compare_strings(ordered[j],newguy,n_permute);
 
                             if ( strings_same ) break;
@@ -2008,6 +2650,8 @@ void pq::consolidate_permutations_plus_swap(std::vector<std::shared_ptr<pq> > &o
                     std::shared_ptr<pq> newguy (new pq(vacuum));
                     newguy->copy((void*)(ordered[i].get()));
                     newguy->swap_two_labels(labels[id1],labels[id2]);
+                    newguy->sort_labels();
+
                     strings_same = compare_strings(ordered[j],newguy,n_permute);
 
                     if ( strings_same ) break;
@@ -2085,31 +2729,10 @@ void pq::consolidate_permutations(std::vector<std::shared_ptr<pq> > &ordered) {
 
 bool pq::compare_strings(std::shared_ptr<pq> ordered_1, std::shared_ptr<pq> ordered_2, int & n_permute) {
 
-    // don't forget w0, u0, r0, l0, b+, b-, m0, s0
-    if ( ordered_1->data->has_u0 != ordered_2->data->has_u0 ) {
-        return false;
-    }
-    if ( ordered_1->data->has_m0 != ordered_2->data->has_m0 ) {
-        return false;
-    }
-    if ( ordered_1->data->has_s0 != ordered_2->data->has_s0 ) {
-        return false;
-    }
+    // don't forget w0
     if ( ordered_1->data->has_w0 != ordered_2->data->has_w0 ) {
         return false;
     }
-    if ( ordered_1->data->has_r0 != ordered_2->data->has_r0 ) {
-        return false;
-    }
-    if ( ordered_1->data->has_l0 != ordered_2->data->has_l0 ) {
-        return false;
-    }
-
-    n_permute = 0;
-
-    //printf("ok, how about these\n");
-    //ordered[i]->print();
-    //ordered[j]->print();
 
     // are strings same?
     if ( ordered_1->symbol.size() != ordered_2->symbol.size() ) return false;
@@ -2123,123 +2746,36 @@ bool pq::compare_strings(std::shared_ptr<pq> ordered_1, std::shared_ptr<pq> orde
 
     // same delta functions (recall these aren't sorted in any way)
     int nsame_d = 0;
-    for (size_t k = 0; k < ordered_1->delta1.size(); k++) {
-        for (size_t l = 0; l < ordered_2->delta1.size(); l++) {
-            if ( ordered_1->delta1[k] == ordered_2->delta1[l] && ordered_1->delta2[k] == ordered_2->delta2[l] ) {
+    for (size_t k = 0; k < ordered_1->data->deltas.size(); k++) {
+        for (size_t l = 0; l < ordered_2->data->deltas.size(); l++) {
+            if ( ordered_1->data->deltas[k].labels[0] == ordered_2->data->deltas[l].labels[0] 
+              && ordered_1->data->deltas[k].labels[1] == ordered_2->data->deltas[l].labels[1] ) {
                 nsame_d++;
                 //break;
-            }else if ( ordered_1->delta2[k] == ordered_2->delta1[l] && ordered_1->delta1[k] == ordered_2->delta2[l] ) {
+            }else if ( ordered_1->data->deltas[k].labels[0] == ordered_2->data->deltas[l].labels[1] 
+                    && ordered_1->data->deltas[k].labels[1] == ordered_2->data->deltas[l].labels[0] ) {
                 nsame_d++;
                 //break;
             }
         }
     }
-    if ( nsame_d != ordered_1->delta1.size() ) return false;
+    if ( nsame_d != ordered_1->data->deltas.size() ) return false;
 
-    // t_amplitudes
-    bool same_string = compare_amplitudes( ordered_1->data->t_amplitudes, ordered_2->data->t_amplitudes, n_permute);
-    if ( !same_string ) return false;
+    // amplitude comparisons, with permutations
+    n_permute = 0;
 
-    // u_amplitudes
-    same_string = compare_amplitudes( ordered_1->data->u_amplitudes, ordered_2->data->u_amplitudes, n_permute);
-    if ( !same_string ) return false;
-
-    // m_amplitudes
-    same_string = compare_amplitudes( ordered_1->data->m_amplitudes, ordered_2->data->m_amplitudes, n_permute);
-    if ( !same_string ) return false;
-
-    // s_amplitudes
-    same_string = compare_amplitudes( ordered_1->data->s_amplitudes, ordered_2->data->s_amplitudes, n_permute);
-    if ( !same_string ) return false;
-
-    // left-hand amplitudes
-    same_string = compare_amplitudes( ordered_1->data->left_amplitudes, ordered_2->data->left_amplitudes, n_permute);
-    if ( !same_string ) return false;
-
-    // right-hand amplitudes
-    same_string = compare_amplitudes( ordered_1->data->right_amplitudes, ordered_2->data->right_amplitudes, n_permute);
-    if ( !same_string ) return false;
-
-    // are tensors same?
-    if ( ordered_1->data->tensor_type != ordered_2->data->tensor_type ) return false;
-
-    int nsame_t = 0;
-    for (size_t k = 0; k < ordered_1->data->tensor.size(); k++) {
-        if ( ordered_1->data->tensor[k] == ordered_2->data->tensor[k] ) {
-            nsame_t++;
-        }
+    bool same_string = false;
+    for (size_t i = 0; i < data->amplitude_types.size(); i++) {
+        char type = data->amplitude_types[i];
+        same_string = compare_amplitudes( ordered_1->data->amps[type], ordered_2->data->amps[type], n_permute);
+        if ( !same_string ) return false;
     }
 
-    // if not the same, check antisymmetry <ij||kl> = -<ji||lk> = -<ij||lk> = <ji||lk>
-    if ( nsame_t != ordered_1->data->tensor.size() ) {
-
-        if ( ordered_1->data->tensor.size() == 4 ) {
-
-            nsame_t = 0;
-            if ( ordered_1->data->tensor[0] == ordered_2->data->tensor[0] ) {
-                nsame_t++;
-            }
-            if ( ordered_1->data->tensor[1] == ordered_2->data->tensor[1] ) {
-                nsame_t++;
-            }
-            if ( ordered_1->data->tensor[2] == ordered_2->data->tensor[3] ) {
-                nsame_t++;
-            }
-            if ( ordered_1->data->tensor[3] == ordered_2->data->tensor[2] ) {
-                nsame_t++;
-            }
-            if ( nsame_t == 4 ) {
-                n_permute++;
-            }
-
-        }
-    }
-    if ( nsame_t != ordered_1->data->tensor.size() ) {
-
-        if ( ordered_1->data->tensor.size() == 4 ) {
-
-            nsame_t = 0;
-            if ( ordered_1->data->tensor[0] == ordered_2->data->tensor[1] ) {
-                nsame_t++;
-            }
-            if ( ordered_1->data->tensor[1] == ordered_2->data->tensor[0] ) {
-                nsame_t++;
-            }
-            if ( ordered_1->data->tensor[2] == ordered_2->data->tensor[2] ) {
-                nsame_t++;
-            }
-            if ( ordered_1->data->tensor[3] == ordered_2->data->tensor[3] ) {
-                nsame_t++;
-            }
-            if ( nsame_t == 4 ) {
-                n_permute++;
-            }
-
-        }
-    }
-    if ( nsame_t != ordered_1->data->tensor.size() ) {
-
-        if ( ordered_1->data->tensor.size() == 4 ) {
-
-            nsame_t = 0;
-            if ( ordered_1->data->tensor[0] == ordered_2->data->tensor[1] ) {
-                nsame_t++;
-            }
-            if ( ordered_1->data->tensor[1] == ordered_2->data->tensor[0] ) {
-                nsame_t++;
-            }
-            if ( ordered_1->data->tensor[2] == ordered_2->data->tensor[3] ) {
-                nsame_t++;
-            }
-            if ( ordered_1->data->tensor[3] == ordered_2->data->tensor[2] ) {
-                nsame_t++;
-            }
-
-        }
-    }
-
-    if ( nsame_t != ordered_1->data->tensor.size() ) {
-        return false;
+    // integral comparisons, with permutations
+    for (size_t i = 0; i < data->integral_types.size(); i++) {
+        std::string type = data->integral_types[i];
+        same_string = compare_integrals( ordered_1->data->ints[type], ordered_2->data->ints[type], n_permute);
+        if ( !same_string ) return false;
     }
 
     // permutations should be the same, too wtf
@@ -2274,490 +2810,66 @@ bool pq::compare_strings(std::shared_ptr<pq> ordered_1, std::shared_ptr<pq> orde
     return true;
 }
 
+/// compare two lists of integrals
+bool pq::compare_integrals( std::vector<integrals> ints1,
+                            std::vector<integrals> ints2,
+                            int & n_permute ) {
+
+    if ( ints1.size() != ints2.size() ) return false;
+    
+    size_t nsame_ints = 0;
+    for (size_t i = 0; i < ints1.size(); i++) {
+        for (size_t j = 0; j < ints2.size(); j++) {
+
+            if ( ints1[i] == ints2[j] ) {
+
+                n_permute += ints1[i].permutations + ints2[j].permutations;
+
+                nsame_ints++;
+                break;
+            }
+
+        }
+    }
+
+    if ( nsame_ints != ints1.size() ) return false;
+
+    return true;
+}
+
 /// compare two lists of amplitudes
-bool pq::compare_amplitudes( std::vector<std::vector<std::string> > amps1, 
-                             std::vector<std::vector<std::string> > amps2, 
+bool pq::compare_amplitudes( std::vector<amplitudes> amps1,
+                             std::vector<amplitudes> amps2,
                              int & n_permute ) {
 
-    // same number of amplitudes?
     if ( amps1.size() != amps2.size() ) return false;
-   
+    
     size_t nsame_amps = 0;
     for (size_t i = 0; i < amps1.size(); i++) {
         for (size_t j = 0; j < amps2.size(); j++) {
 
-            // t1 vs t2 vs t3, etc?
-            if ( amps1[i].size() != amps2[j].size() ) continue;
+            if ( amps1[i] == amps2[j] ) {
 
-            // for higher than t4, just return false
+                n_permute += amps1[i].permutations + amps2[j].permutations;
 
-            // check labels
-            size_t dim = amps1[i].size();
-            int nsame_idx = 0;
-
-            // cases: 
-
-            // dim = 1: ip singles, no permutations
-            if ( dim == 1 ) {
-
-                if ( amps1[i][0] == amps2[j][0] ) {
-                    nsame_idx = 1;
-                }
-
-            // dim = 2: singles, no permutations
-            }else if ( dim == 2 ) {
-
-                if ( amps1[i][0] == amps2[j][0] && amps1[i][1] == amps2[j][1] ) {
-                    nsame_idx = 2;
-                }
-
-            // dim = 3: ip/ea doubles 
-            }else if ( dim == 3 ) {
-            
-                // two possibilities ... either oov/vvo or ovv/voo
-
-                if ( amps1[i][0] == amps2[j][0] 
-                  && amps1[i][1] == amps2[j][1] 
-                  && amps1[i][2] == amps2[j][2] ) {
-
-                    nsame_idx += 3;
-
-                }else if ( amps1[i][0] == amps2[j][1] 
-                        && amps1[i][1] == amps2[j][0] 
-                        && amps1[i][2] == amps2[j][2] ) {
-
-                    nsame_idx += 3;
-                    n_permute++;
-
-                }else if ( amps1[i][0] == amps2[j][0] 
-                        && amps1[i][1] == amps2[j][2] 
-                        && amps1[i][2] == amps2[j][1] ) {
-
-                    nsame_idx += 3;
-                    n_permute++;
-
-                }
-
-            // dim = 4: doubles
-            }else if ( dim == 4 ) {
-
-                int n_permute_1 = 0;
-                int n_permute_2 = 0;
-
-                // first part
-                if ( amps1[i][0] == amps2[j][0]
-                  && amps1[i][1] == amps2[j][1] ) {
-
-                    nsame_idx += 2;
-
-                }else if ( amps1[i][0] == amps2[j][1]
-                        && amps1[i][1] == amps2[j][0] ) {
-
-                    nsame_idx += 2;
-                    n_permute_1 = 1;
-
-                }
-
-                // second part
-                if ( amps1[i][2] == amps2[j][2]
-                  && amps1[i][3] == amps2[j][3] ) {
-
-                    nsame_idx += 2;
-
-                }else if ( amps1[i][2] == amps2[j][3]
-                        && amps1[i][3] == amps2[j][2] ) {
-
-                    nsame_idx += 2;
-                    n_permute_2 = 1;
-
-                }
-                if ( nsame_idx == dim ) {
-                    n_permute += n_permute_1 + n_permute_2;
-                }
-
-            // dim = 5: ip / ea triples 
-            }else if ( dim == 5 ) {
-            
-                // so many possibilities ... either ooovv/vvvoo or oovvv/vvooo
-
-                int nsame_1 = 0;
-                int nsame_2 = 0;
-                int nsame_3 = 0;
-                int nsame_4 = 0;
-
-                int n_permute_1 = 0;
-                int n_permute_2 = 0;
-                int n_permute_3 = 0;
-                int n_permute_4 = 0;
-
-                if ( amps1[i][0] == amps2[j][0]
-                  && amps1[i][1] == amps2[j][1] ) {
-                    
-                    nsame_1 += 2;
-                    triples_permutations(amps1[i],amps2[j],nsame_1,n_permute_1,2);
-
-                }
-
-                if ( amps1[i][0] == amps2[j][1]
-                  && amps1[i][1] == amps2[j][0] ) {
-
-                    nsame_2 += 2;
-                    n_permute_2++;
-                    triples_permutations(amps1[i],amps2[j],nsame_2,n_permute_2,2);
-
-                }
-
-                if ( amps1[i][3] == amps2[j][3]
-                  && amps1[i][4] == amps2[j][4] ) {
-                    
-                    nsame_3 += 2;
-                    triples_permutations(amps1[i],amps2[j],nsame_3,n_permute_3,0);
-
-                }
-
-                if ( amps1[i][3] == amps2[j][4]
-                  && amps1[i][4] == amps2[j][3] ) {
-
-                    nsame_4 += 2;
-                    n_permute_4++;
-                    triples_permutations(amps1[i],amps2[j],nsame_4,n_permute_4,0);
-
-                }
-
-                // which combination wins?
-                if ( nsame_1 == dim ) {
-                    nsame_idx = nsame_1;
-                    n_permute += n_permute_1;
-                }else if ( nsame_2 == dim ) {
-                    nsame_idx = nsame_2;
-                    n_permute += n_permute_2;
-                }else if ( nsame_3 == dim ) {
-                    nsame_idx = nsame_3;
-                    n_permute += n_permute_3;
-                }else if ( nsame_4 == dim ) {
-                    nsame_idx = nsame_4;
-                    n_permute += n_permute_4;
-                }
-                
-            // dim = 6: triples
-            }else if ( dim == 6 ) {
-
-                int n_permute_1 = 0;
-                int n_permute_2 = 0;
-
-                // first part
-                triples_permutations(amps1[i],amps2[j],nsame_idx,n_permute_1,0);
-
-                // second part
-                triples_permutations(amps1[i],amps2[j],nsame_idx,n_permute_2,3);
-
-                if ( nsame_idx == dim ) {
-                    n_permute += n_permute_1 + n_permute_2;
-                }
-
-
-            // dim = 7: ip / ea quadruples 
-            }else if ( dim == 7 ) {
-
-                int nsame_1 = 0;
-                int nsame_2 = 0;
-
-                int n_permute_1 = 0;
-                int n_permute_2 = 0;
-
-                // try 3/4
-                triples_permutations(amps1[i],amps2[j],nsame_1,n_permute_1,0);
-                quadruples_permutations(amps1[i],amps2[j],nsame_1,n_permute_1,3);
-
-                // try 4/3
-                quadruples_permutations(amps1[i],amps2[j],nsame_2,n_permute_2,0);
-                triples_permutations(amps1[i],amps2[j],nsame_2,n_permute_2,4);
-
-                // which combination wins?
-                if ( nsame_1 == dim ) {
-                    nsame_idx = nsame_1;
-                    n_permute += n_permute_1;
-                }else if ( nsame_2 == dim ) {
-                    nsame_idx = nsame_2;
-                    n_permute += n_permute_2;
-                }
-
-            // dim = 8: quadruples
-            }else if ( dim == 8 ) {
-
-                int n_permute_1 = 0;
-                int n_permute_2 = 0;
-
-                // first part
-                quadruples_permutations(amps1[i],amps2[j],nsame_idx,n_permute_1,0);
-
-                // second part
-                quadruples_permutations(amps1[i],amps2[j],nsame_idx,n_permute_2,4);
-
-                if ( nsame_idx == dim ) {
-                    n_permute += n_permute_1 + n_permute_2;
-                }
-
-            }else {
-
-                return false;
-
-            }
-
-            // if all indices are the same, the amplitudes must be the same, but we need to be careful of permutations
-            if ( nsame_idx == dim ) {
                 nsame_amps++;
                 break;
             }
+
         }
     }
+
     if ( nsame_amps != amps1.size() ) return false;
 
     return true;
 }
 
-/// permutations and coincidences for triples
-void pq::triples_permutations(std::vector<std::string> amps1, 
-                              std::vector<std::string> amps2, 
-                              int & nsame_idx, 
-                              int & n_permute,
-                              int off) {
-
-   if ( amps1[0+off] == amps2[0+off] 
-     && amps1[1+off] == amps2[1+off] 
-     && amps1[2+off] == amps2[2+off] ) {
-
-       nsame_idx += 3;
-
-   }else if ( amps1[0+off] == amps2[0+off] 
-           && amps1[1+off] == amps2[2+off] 
-           && amps1[2+off] == amps2[1+off] ) {
-
-       nsame_idx += 3;
-       n_permute++;
-
-   }else if ( amps1[0+off] == amps2[1+off] 
-           && amps1[1+off] == amps2[0+off] 
-           && amps1[2+off] == amps2[2+off] ) {
-
-       nsame_idx += 3;
-       n_permute++;
-
-   }else if ( amps1[0+off] == amps2[1+off] 
-           && amps1[1+off] == amps2[2+off] 
-           && amps1[2+off] == amps2[0+off] ) {
-
-       nsame_idx += 3;
-
-   }else if ( amps1[0+off] == amps2[2+off] 
-           && amps1[1+off] == amps2[0+off] 
-           && amps1[2+off] == amps2[1+off] ) {
-
-       nsame_idx += 3;
-
-   }else if ( amps1[0+off] == amps2[2+off] 
-           && amps1[1+off] == amps2[1+off] 
-           && amps1[2+off] == amps2[0+off] ) {
-
-       nsame_idx += 3;
-       n_permute++;
-
-   }
-}
-
-/// permutations and coincidences for quadruples
-void pq::quadruples_permutations(std::vector<std::string> amps1, 
-                                 std::vector<std::string> amps2, 
-                                 int & nsame_idx, 
-                                 int & n_permute,
-                                 int off) {
-
-    if ( amps1[0+off] == amps2[0+off] 
-      && amps1[1+off] == amps2[1+off] 
-      && amps1[2+off] == amps2[2+off]
-      && amps1[3+off] == amps2[3+off] ) {
-
-        nsame_idx += 4;
-
-    }else if ( amps1[0+off] == amps2[0+off] 
-            && amps1[1+off] == amps2[1+off] 
-            && amps1[2+off] == amps2[3+off]
-            && amps1[3+off] == amps2[2+off] ) {
-
-        nsame_idx += 4;
-        n_permute++;
-
-    }else if ( amps1[0+off] == amps2[0+off] 
-            && amps1[1+off] == amps2[2+off] 
-            && amps1[2+off] == amps2[1+off]
-            && amps1[3+off] == amps2[3+off] ) {
-
-        nsame_idx += 4;
-        n_permute++;
-
-    }else if ( amps1[0+off] == amps2[0+off] 
-            && amps1[1+off] == amps2[2+off] 
-            && amps1[2+off] == amps2[3+off]
-            && amps1[3+off] == amps2[1+off] ) {
-
-        nsame_idx += 4;
-
-    }else if ( amps1[0+off] == amps2[0+off] 
-            && amps1[1+off] == amps2[3+off] 
-            && amps1[2+off] == amps2[1+off]
-            && amps1[3+off] == amps2[2+off] ) {
-
-        nsame_idx += 4;
-
-    }else if ( amps1[0+off] == amps2[0+off] 
-            && amps1[1+off] == amps2[3+off] 
-            && amps1[2+off] == amps2[2+off]
-            && amps1[3+off] == amps2[1+off] ) {
-
-        nsame_idx += 4;
-        n_permute++;
-
-    }else if ( amps1[0+off] == amps2[1+off] 
-            && amps1[1+off] == amps2[0+off] 
-            && amps1[2+off] == amps2[2+off]
-            && amps1[3+off] == amps2[3+off] ) {
-
-        nsame_idx += 4;
-        n_permute++;
-
-    }else if ( amps1[0+off] == amps2[1+off] 
-            && amps1[1+off] == amps2[0+off] 
-            && amps1[2+off] == amps2[3+off]
-            && amps1[3+off] == amps2[2+off] ) {
-
-        nsame_idx += 4;
-
-    }else if ( amps1[0+off] == amps2[1+off] 
-            && amps1[1+off] == amps2[2+off] 
-            && amps1[2+off] == amps2[3+off]
-            && amps1[3+off] == amps2[0+off] ) {
-
-        nsame_idx += 4;
-        n_permute++;
-
-    }else if ( amps1[0+off] == amps2[1+off] 
-            && amps1[1+off] == amps2[2+off] 
-            && amps1[2+off] == amps2[0+off]
-            && amps1[3+off] == amps2[3+off] ) {
-
-        nsame_idx += 4;
-
-    }else if ( amps1[0+off] == amps2[1+off] 
-            && amps1[1+off] == amps2[3+off] 
-            && amps1[2+off] == amps2[0+off]
-            && amps1[3+off] == amps2[2+off] ) {
-
-        nsame_idx += 4;
-        n_permute++;
-
-    }else if ( amps1[0+off] == amps2[1+off] 
-            && amps1[1+off] == amps2[3+off] 
-            && amps1[2+off] == amps2[2+off]
-            && amps1[3+off] == amps2[0+off] ) {
-
-        nsame_idx += 4;
-
-    }else if ( amps1[0+off] == amps2[2+off] 
-            && amps1[1+off] == amps2[0+off] 
-            && amps1[2+off] == amps2[3+off]
-            && amps1[3+off] == amps2[1+off] ) {
-
-        nsame_idx += 4;
-        n_permute++;
-
-    }else if ( amps1[0+off] == amps2[2+off] 
-            && amps1[1+off] == amps2[0+off] 
-            && amps1[2+off] == amps2[1+off]
-            && amps1[3+off] == amps2[3+off] ) {
-
-        nsame_idx += 4;
-
-    }else if ( amps1[0+off] == amps2[2+off] 
-            && amps1[1+off] == amps2[1+off] 
-            && amps1[2+off] == amps2[0+off]
-            && amps1[3+off] == amps2[3+off] ) {
-
-        nsame_idx += 4;
-        n_permute++;
-
-    }else if ( amps1[0+off] == amps2[2+off] 
-            && amps1[1+off] == amps2[1+off] 
-            && amps1[2+off] == amps2[3+off]
-            && amps1[3+off] == amps2[0+off] ) {
-
-        nsame_idx += 4;
-
-    }else if ( amps1[0+off] == amps2[2+off] 
-            && amps1[1+off] == amps2[3+off] 
-            && amps1[2+off] == amps2[0+off]
-            && amps1[3+off] == amps2[1+off] ) {
-
-        nsame_idx += 4;
-
-    }else if ( amps1[0+off] == amps2[2+off] 
-            && amps1[1+off] == amps2[3+off] 
-            && amps1[2+off] == amps2[1+off]
-            && amps1[3+off] == amps2[0+off] ) {
-
-        nsame_idx += 4;
-        n_permute++;
-
-    }else if ( amps1[0+off] == amps2[3+off] 
-            && amps1[1+off] == amps2[0+off] 
-            && amps1[2+off] == amps2[1+off]
-            && amps1[3+off] == amps2[2+off] ) {
-
-        nsame_idx += 4;
-        n_permute++;
-
-    }else if ( amps1[0+off] == amps2[3+off] 
-            && amps1[1+off] == amps2[0+off] 
-            && amps1[2+off] == amps2[2+off]
-            && amps1[3+off] == amps2[1+off] ) {
-
-        nsame_idx += 4;
-
-    }else if ( amps1[0+off] == amps2[3+off] 
-            && amps1[1+off] == amps2[1+off] 
-            && amps1[2+off] == amps2[0+off]
-            && amps1[3+off] == amps2[2+off] ) {
-
-        nsame_idx += 4;
-
-    }else if ( amps1[0+off] == amps2[3+off] 
-            && amps1[1+off] == amps2[1+off] 
-            && amps1[2+off] == amps2[2+off]
-            && amps1[3+off] == amps2[0+off] ) {
-
-        nsame_idx += 4;
-        n_permute++;
-
-    }else if ( amps1[0+off] == amps2[3+off] 
-            && amps1[1+off] == amps2[2+off] 
-            && amps1[2+off] == amps2[0+off]
-            && amps1[3+off] == amps2[1+off] ) {
-
-        nsame_idx += 4;
-        n_permute++;
-
-    }else if ( amps1[0+off] == amps2[3+off] 
-            && amps1[1+off] == amps2[2+off] 
-            && amps1[2+off] == amps2[1+off]
-            && amps1[3+off] == amps2[0+off] ) {
-
-        nsame_idx += 4;
-
-   }
-}
 
 // copy all data, except symbols and daggers. 
 
-void pq::shallow_copy(void * copy_me) { 
+// TODO: should probably make sure all of the std::vectors
+//       (ints, amplitudes, deltas) have been cleared.
+void pq::shallow_copy(void * copy_me) {
 
     pq * in = reinterpret_cast<pq * >(copy_me);
 
@@ -2770,158 +2882,89 @@ void pq::shallow_copy(void * copy_me) {
     // factor
     data->factor = in->data->factor;
 
-    // temporary delta functions
-    std::vector<std::string> tmp_delta1;
-    std::vector<std::string> tmp_delta2;
-
-    // data->tensor
-    for (size_t i = 0; i < in->data->tensor.size(); i++) {
-        data->tensor.push_back(in->data->tensor[i]);
+    // deltas
+    for (size_t i = 0; i < in->data->deltas.size(); i++) {
+        data->deltas.push_back(in->data->deltas[i]);
     }
 
-    // data->tensor_type
-    data->tensor_type = in->data->tensor_type;
-
-    // delta1, delta2
-    for (size_t i = 0; i < in->delta1.size(); i++) {
-        delta1.push_back(in->delta1[i]);
-        delta2.push_back(in->delta2[i]);
-    }
-
-    // t_amplitudes
-    for (size_t i = 0; i < in->data->t_amplitudes.size(); i++) {
-        std::vector<std::string> tmp;
-        for (size_t j = 0; j < in->data->t_amplitudes[i].size(); j++) {
-            tmp.push_back(in->data->t_amplitudes[i][j]);
+    // integrals
+    for (size_t i = 0; i < data->integral_types.size(); i++) {
+        std::string type = data->integral_types[i];
+        for (size_t j = 0; j < in->data->ints[type].size(); j++) {
+            data->ints[type].push_back( in->data->ints[type][j] );
         }
-        data->t_amplitudes.push_back(tmp);
     }
 
-    // u_amplitudes
-    for (size_t i = 0; i < in->data->u_amplitudes.size(); i++) {
-        std::vector<std::string> tmp;
-        for (size_t j = 0; j < in->data->u_amplitudes[i].size(); j++) {
-            tmp.push_back(in->data->u_amplitudes[i][j]);
+    // amplitudes
+    for (size_t i = 0; i < data->amplitude_types.size(); i++) {
+        char type = data->amplitude_types[i];
+        for (size_t j = 0; j < in->data->amps[type].size(); j++) {
+            data->amps[type].push_back( in->data->amps[type][j] );
         }
-        data->u_amplitudes.push_back(tmp);
     }
-
-    // m_amplitudes
-    for (size_t i = 0; i < in->data->m_amplitudes.size(); i++) {
-        std::vector<std::string> tmp;
-        for (size_t j = 0; j < in->data->m_amplitudes[i].size(); j++) {
-            tmp.push_back(in->data->m_amplitudes[i][j]);
-        }
-        data->m_amplitudes.push_back(tmp);
-    }
-
-    // s_amplitudes
-    for (size_t i = 0; i < in->data->s_amplitudes.size(); i++) {
-        std::vector<std::string> tmp;
-        for (size_t j = 0; j < in->data->s_amplitudes[i].size(); j++) {
-            tmp.push_back(in->data->s_amplitudes[i][j]);
-        }
-        data->s_amplitudes.push_back(tmp);
-    }
-
-    // left-hand amplitudes
-    for (size_t i = 0; i < in->data->left_amplitudes.size(); i++) {
-        std::vector<std::string> tmp;
-        for (size_t j = 0; j < in->data->left_amplitudes[i].size(); j++) {
-            tmp.push_back(in->data->left_amplitudes[i][j]);
-        }
-        data->left_amplitudes.push_back(tmp);
-    }
-
-    // right-hand amplitudes
-    for (size_t i = 0; i < in->data->right_amplitudes.size(); i++) {
-        std::vector<std::string> tmp;
-        for (size_t j = 0; j < in->data->right_amplitudes[i].size(); j++) {
-            tmp.push_back(in->data->right_amplitudes[i][j]);
-        }
-        data->right_amplitudes.push_back(tmp);
-    }
-
-    // l0 
-    data->has_l0 = in->data->has_l0;
-
-    // r0 
-    data->has_r0 = in->data->has_r0;
-
-    // u0 
-    data->has_u0 = in->data->has_u0;
-
-    // m0 
-    data->has_m0 = in->data->has_m0;
-
-    // s0 
-    data->has_s0 = in->data->has_s0;
 
     // w0 
     data->has_w0 = in->data->has_w0;
 
-/*
-    // b 
-    data->has_b = in->data->has_b;
-
-    // b_dagger 
-    data->has_b_dagger = in->data->has_b_dagger;
-*/
+    // non-summed spin labels
+    data->non_summed_spin_labels = in->data->non_summed_spin_labels;
 
 }
 
-
+// how many times does an index appear amplitudes, deltas, and integrals?
 int pq::index_in_anywhere(std::string idx) {
 
     int n = 0;
 
     n += index_in_deltas(idx);
-    n += index_in_tensor(idx);
-    n += index_in_term(idx, data->t_amplitudes);
-    n += index_in_term(idx, data->u_amplitudes);
-    n += index_in_term(idx, data->m_amplitudes);
-    n += index_in_term(idx, data->s_amplitudes);
-    n += index_in_term(idx, data->left_amplitudes);
-    n += index_in_term(idx, data->right_amplitudes);
+    for (size_t i = 0; i < data->integral_types.size(); i++) {
+        std::string type = data->integral_types[i];
+        n += index_in_integrals(idx, data->ints[type]);
+    }
+    for (size_t i = 0; i < data->amplitude_types.size(); i++) {
+        char type = data->amplitude_types[i];
+        n += index_in_amplitudes(idx, data->amps[type]);
+    }
 
     return n;
-
 }
 
+// how many times does an index appear deltas?
 int pq::index_in_deltas(std::string idx) {
 
     int n = 0;
-    for (size_t i = 0; i < delta1.size(); i++) {
-        if ( delta1[i] == idx ) {
+    for (size_t i = 0; i < data->deltas.size(); i++) {
+        if ( data->deltas[i].labels[0] == idx ) {
+            n++;
+        }
+        if ( data->deltas[i].labels[1] == idx ) {
             n++;
         }
     }
-    for (size_t i = 0; i < delta2.size(); i++) {
-        if ( delta2[i] == idx ) {
-            n++;
+    return n;
+}
+
+// how many times does an index appear integrals?
+int pq::index_in_integrals(std::string idx, std::vector<integrals> ints) {
+
+    int n = 0;
+    for (size_t i = 0; i < ints.size(); i++) {
+        for (size_t j = 0; j < ints[i].labels.size(); j++) {
+            if ( ints[i].labels[j] == idx ) {
+                n++;
+            }
+           
         }
     }
     return n;
 
 }
-int pq::index_in_tensor(std::string idx) {
+int pq::index_in_amplitudes(std::string idx, std::vector<amplitudes> amps) {
 
     int n = 0;
-    for (size_t i = 0; i < data->tensor.size(); i++) {
-        if ( data->tensor[i] == idx ) {
-            n++;
-        }
-    }
-    return n;
-
-}
-
-int pq::index_in_term(std::string idx, std::vector<std::vector<std::string> > term) {
-
-    int n = 0;
-    for (size_t i = 0; i < term.size(); i++) {
-        for (size_t j = 0; j < term[i].size(); j++) {
-            if ( term[i][j] == idx ) {
+    for (size_t i = 0; i < amps.size(); i++) {
+        for (size_t j = 0; j < amps[i].labels.size(); j++) {
+            if ( amps[i].labels[j] == idx ) {
                 n++;
             }
            
@@ -2934,59 +2977,95 @@ int pq::index_in_term(std::string idx, std::vector<std::vector<std::string> > te
 void pq::replace_index_everywhere(std::string old_idx, std::string new_idx) {
 
     //replace_index_in_deltas(old_idx,new_idx);
-    replace_index_in_tensor(old_idx,new_idx);
-    replace_index_in_term(old_idx,new_idx,data->t_amplitudes);
-    replace_index_in_term(old_idx,new_idx,data->u_amplitudes);
-    replace_index_in_term(old_idx,new_idx,data->m_amplitudes);
-    replace_index_in_term(old_idx,new_idx,data->s_amplitudes);
-    replace_index_in_term(old_idx,new_idx,data->left_amplitudes);
-    replace_index_in_term(old_idx,new_idx,data->right_amplitudes);
+    for (size_t i = 0; i < data->integral_types.size(); i++) {
+        std::string type = data->integral_types[i];
+        replace_index_in_integrals(old_idx, new_idx, data->ints[type]);
+    }
+    for (size_t i = 0; i < data->amplitude_types.size(); i++) {
+        char type = data->amplitude_types[i];
+        replace_index_in_amplitudes(old_idx, new_idx, data->amps[type]);
+    }
+    sort_labels();
 
 }
 
-void pq::replace_index_in_tensor(std::string old_idx, std::string new_idx) {
+void pq::set_spin_everywhere(std::string target, std::string spin) {
 
-    for (size_t i = 0; i < data->tensor.size(); i++) {
-        if ( data->tensor[i] == old_idx ) {
-            data->tensor[i] = new_idx;
-            // dont' return because indices may be repeated in two-electron integrals
-            //return;
+    // integrals
+    for (size_t i = 0; i < data->integral_types.size(); i++) {
+        std::string type = data->integral_types[i];
+        for (size_t j = 0; j < data->ints[type].size(); j++) {
+            for (size_t k = 0; k < data->ints[type][j].labels.size(); k++) {
+                if ( data->ints[type][j].labels[k] == target ) {
+                    data->ints[type][j].spin_labels[k] = spin;
+                }
+            }
         }
     }
-
-}
-void pq::replace_index_in_deltas(std::string old_idx, std::string new_idx) {
-
-    for (size_t i = 0; i < delta1.size(); i++) {
-        if ( delta1[i] == old_idx ) {
-            delta1[i] = new_idx;
-            // dont' return because indices may be repeated in two-electron integrals
-            //return;
+    // amplitudes
+    for (size_t i = 0; i < data->amplitude_types.size(); i++) {
+        char type = data->amplitude_types[i];
+        for (size_t j = 0; j < data->amps[type].size(); j++) {
+            for (size_t k = 0; k < data->amps[type][j].labels.size(); k++) {
+                if ( data->amps[type][j].labels[k] == target ) {
+                    data->amps[type][j].spin_labels[k] = spin;
+                }
+            }
         }
     }
-    for (size_t i = 0; i < delta2.size(); i++) {
-        if ( delta2[i] == old_idx ) {
-            delta2[i] = new_idx;
-            // dont' return because indices may be repeated in two-electron integrals
-            //return;
-        }
-    }
-
-}
-
-void pq::replace_index_in_term(std::string old_idx, std::string new_idx, std::vector<std::vector<std::string> > &term) {
-
-    for (size_t i = 0; i < term.size(); i++) {
-        for (size_t j = 0; j < term[i].size(); j++) {
-            if ( term[i][j] == old_idx ) {
-                term[i][j] = new_idx;
+    // deltas
+    for (size_t i = 0; i < data->deltas.size(); i++) {
+        for (size_t j = 0; j < data->deltas[i].labels.size(); j++) {
+            if ( data->deltas[i].labels[j] == target ) {
+                data->deltas[i].spin_labels[j] = spin;
             }
         }
     }
 
 }
 
-// find and replace any funny labels in tensors with conventional ones. i.e., o1 -> i ,v1 -> a
+void pq::replace_index_in_deltas(std::string old_idx, std::string new_idx) {
+
+    for (size_t i = 0; i < data->deltas.size(); i++) {
+        if ( data->deltas[i].labels[0] == old_idx ) {
+            data->deltas[i].labels[0] = new_idx;
+            // dont' return because indices may be repeated in two-electron integrals
+            //return;
+        }
+    }
+    for (size_t i = 0; i < data->deltas.size(); i++) {
+        if ( data->deltas[i].labels[1] == old_idx ) {
+            data->deltas[i].labels[1] = new_idx;
+            // dont' return because indices may be repeated in two-electron integrals
+            //return;
+        }
+    }
+
+}
+
+void pq::replace_index_in_amplitudes(std::string old_idx, std::string new_idx, std::vector<amplitudes> &amps) {
+
+    for (size_t i = 0; i < amps.size(); i++) {
+        for (size_t j = 0; j < amps[i].labels.size(); j++) {
+            if ( amps[i].labels[j] == old_idx ) {
+                amps[i].labels[j] = new_idx;
+            }
+        }
+    }
+}
+
+void pq::replace_index_in_integrals(std::string old_idx, std::string new_idx, std::vector<integrals> &ints) {
+
+    for (size_t i = 0; i < ints.size(); i++) {
+        for (size_t j = 0; j < ints[i].labels.size(); j++) {
+            if ( ints[i].labels[j] == old_idx ) {
+                ints[i].labels[j] = new_idx;
+            }
+        }
+    }
+}
+
+// find and replace any funny labels in integrals with conventional ones. i.e., o1 -> i ,v1 -> a
 void pq::use_conventional_labels() {
 
     // occupied first:
@@ -3003,10 +3082,8 @@ void pq::use_conventional_labels() {
 
             for (size_t j = 0; j < occ_out.size(); j++) {
 
-                //if ( !index_in_tensor(occ_out[j]) ) 
                 if ( index_in_anywhere(occ_out[j]) == 0 ) {
 
-                    //replace_index_in_tensor(occ_in[i],occ_out[j]);
                     replace_index_everywhere(occ_in[i],occ_out[j]);
                     break;
                 }
@@ -3030,7 +3107,6 @@ void pq::use_conventional_labels() {
 
                 if ( index_in_anywhere(vir_out[j]) == 0 ) {
 
-                    //replace_index_in_tensor(vir_in[i],vir_out[j]);
                     replace_index_everywhere(vir_in[i],vir_out[j]);
                     break;
                 }
@@ -3065,12 +3141,12 @@ void pq::gobble_deltas() {
         }
     }
 
-    for (size_t i = 0; i < delta1.size(); i++) {
+    for (size_t i = 0; i < data->deltas.size(); i++) {
 
         // is delta label 1 in list of summation labels?
         bool have_delta1 = false;
         for (size_t j = 0; j < sum_labels.size(); j++) {
-            if ( delta1[i] == sum_labels[j] ) {
+            if ( data->deltas[i].labels[0] == sum_labels[j] ) {
                 have_delta1 = true;
                 break;
             }
@@ -3078,7 +3154,7 @@ void pq::gobble_deltas() {
         // is delta label 2 in list of summation labels?
         bool have_delta2 = false;
         for (size_t j = 0; j < sum_labels.size(); j++) {
-            if ( delta2[i] == sum_labels[j] ) {
+            if ( data->deltas[i].labels[1] == sum_labels[j] ) {
                 have_delta2 = true;
                 break;
             }
@@ -3090,85 +3166,64 @@ void pq::gobble_deltas() {
         // like terms this way. requires swapping up to four 
         // labels.
         if ( have_delta1 ) {
-            replace_index_everywhere( delta1[i], delta2[i] );
+            replace_index_everywhere( data->deltas[i].labels[0], data->deltas[i].labels[1] );
             continue;
         }else if ( have_delta2 ) {
-            replace_index_everywhere( delta2[i], delta1[i] );
+            replace_index_everywhere( data->deltas[i].labels[1], data->deltas[i].labels[0] );
             continue;
         }
 */
 
-        bool delta1_in_tensor           = ( index_in_tensor( delta1[i] ) > 0 ) ? true : false;
-        bool delta2_in_tensor           = ( index_in_tensor( delta2[i] ) > 0 ) ? true : false;
-        bool delta1_in_t_amplitudes     = ( index_in_term( delta1[i], data->t_amplitudes ) > 0 ) ? true : false;
-        bool delta2_in_t_amplitudes     = ( index_in_term( delta2[i], data->t_amplitudes ) > 0 ) ? true : false;
-        bool delta1_in_left_amplitudes  = ( index_in_term( delta1[i], data->left_amplitudes ) > 0 ) ? true : false;
-        bool delta2_in_left_amplitudes  = ( index_in_term( delta2[i], data->left_amplitudes ) > 0 ) ? true : false;
-        bool delta1_in_right_amplitudes = ( index_in_term( delta1[i], data->right_amplitudes ) > 0 ) ? true : false;
-        bool delta2_in_right_amplitudes = ( index_in_term( delta2[i], data->right_amplitudes ) > 0 ) ? true : false;
-        bool delta1_in_u_amplitudes     = ( index_in_term( delta1[i], data->u_amplitudes ) > 0 ) ? true : false;
-        bool delta2_in_u_amplitudes     = ( index_in_term( delta2[i], data->u_amplitudes ) > 0 ) ? true : false;
-        bool delta1_in_m_amplitudes     = ( index_in_term( delta1[i], data->m_amplitudes ) > 0 ) ? true : false;
-        bool delta2_in_m_amplitudes     = ( index_in_term( delta2[i], data->m_amplitudes ) > 0 ) ? true : false;
-        bool delta1_in_s_amplitudes     = ( index_in_term( delta1[i], data->s_amplitudes ) > 0 ) ? true : false;
-        bool delta2_in_s_amplitudes     = ( index_in_term( delta2[i], data->s_amplitudes ) > 0 ) ? true : false;
-
-        if ( delta1_in_tensor && have_delta1 ) {
-            replace_index_in_tensor( delta1[i], delta2[i] );
-            continue;
-        }else if ( delta2_in_tensor && have_delta2 ) {
-            replace_index_in_tensor( delta2[i], delta1[i] );
-            continue;
-        }else if ( delta1_in_t_amplitudes && have_delta1 ) {
-            replace_index_in_term( delta1[i], delta2[i], data->t_amplitudes );
-            continue;
-        }else if ( delta2_in_t_amplitudes && have_delta2 ) {
-            replace_index_in_term( delta2[i], delta1[i], data->t_amplitudes );
-            continue;
-        }else if ( delta1_in_left_amplitudes && have_delta1 ) {
-            replace_index_in_term( delta1[i], delta2[i], data->left_amplitudes );
-            continue;
-        }else if ( delta2_in_left_amplitudes && have_delta2 ) {
-            replace_index_in_term( delta2[i], delta1[i], data->left_amplitudes );
-            continue;
-        }else if ( delta1_in_right_amplitudes && have_delta1 ) {
-            replace_index_in_term( delta1[i], delta2[i], data->right_amplitudes );
-            continue;
-        }else if ( delta2_in_right_amplitudes && have_delta2 ) {
-            replace_index_in_term( delta2[i], delta1[i], data->right_amplitudes );
-            continue;
-        }else if ( delta1_in_u_amplitudes && have_delta1 ) {
-            replace_index_in_term( delta1[i], delta2[i], data->u_amplitudes );
-            continue;
-        }else if ( delta2_in_u_amplitudes && have_delta2 ) {
-            replace_index_in_term( delta2[i], delta1[i], data->u_amplitudes );
-            continue;
-        }else if ( delta1_in_m_amplitudes && have_delta1 ) {
-            replace_index_in_term( delta1[i], delta2[i], data->m_amplitudes );
-            continue;
-        }else if ( delta2_in_m_amplitudes && have_delta2 ) {
-            replace_index_in_term( delta2[i], delta1[i], data->m_amplitudes );
-            continue;
-        }else if ( delta1_in_s_amplitudes && have_delta1 ) {
-            replace_index_in_term( delta1[i], delta2[i], data->s_amplitudes );
-            continue;
-        }else if ( delta2_in_s_amplitudes && have_delta2 ) {
-            replace_index_in_term( delta2[i], delta1[i], data->s_amplitudes );
-            continue;
+        bool do_continue = false;
+        for (size_t j = 0; j < data->integral_types.size(); j++) { 
+            std::string type = data->integral_types[j];
+            if ( have_delta1 && index_in_integrals( data->deltas[i].labels[0], data->ints[type] ) > 0 ) {
+               replace_index_in_integrals( data->deltas[i].labels[0], data->deltas[i].labels[1], data->ints[type] );
+               do_continue = true;
+               break;
+            }else if ( have_delta2 && index_in_integrals( data->deltas[i].labels[1], data->ints[type] ) > 0 ) {
+               replace_index_in_integrals( data->deltas[i].labels[1], data->deltas[i].labels[0], data->ints[type] );
+               do_continue = true;
+               break;
+            }
         }
+        if ( do_continue ) continue;
+
+        // TODO: note that the code only efficiently collects terms when the amplitude
+        // list is ordered as {'t', 'l', 'r', 'u', 'm', 's'} ... i don't know why, but
+        // i do know that this is the problematic part of the code
+        do_continue = false;
+        std::vector<char> types = {'t', 'l', 'r', 'u', 'm', 's'};
+        for (size_t j = 0; j < types.size(); j++) { 
+            char type = types[j];
+            if ( have_delta1 && index_in_amplitudes( data->deltas[i].labels[0], data->amps[type] ) > 0 ) {
+               replace_index_in_amplitudes( data->deltas[i].labels[0], data->deltas[i].labels[1], data->amps[type] );
+               do_continue = true;
+               break;
+            }else if ( have_delta2 && index_in_amplitudes( data->deltas[i].labels[1], data->amps[type] ) > 0 ) {
+               replace_index_in_amplitudes( data->deltas[i].labels[1], data->deltas[i].labels[0], data->amps[type] );
+               do_continue = true;
+               break;
+            }
+        }
+        if ( do_continue ) continue;
 
         // at this point, it is safe to assume the delta function must remain
-        tmp_delta1.push_back(delta1[i]);
-        tmp_delta2.push_back(delta2[i]);
+        tmp_delta1.push_back(data->deltas[i].labels[0]);
+        tmp_delta2.push_back(data->deltas[i].labels[1]);
 
     }
 
-    delta1.clear();
-    delta2.clear();
+    data->deltas.clear();
 
     for (size_t i = 0; i < tmp_delta1.size(); i++) {
-        delta1.push_back(tmp_delta1[i]);
-        delta2.push_back(tmp_delta2[i]);
+
+        delta_functions deltas;
+        deltas.labels.push_back(tmp_delta1[i]);
+        deltas.labels.push_back(tmp_delta2[i]);
+        deltas.sort();
+        data->deltas.push_back(deltas);
+
     }
 
 }
@@ -3202,6 +3257,7 @@ void pq::copy(void * copy_me) {
     for (size_t i = 0; i < in->data->permutations.size(); i++) {
         data->permutations.push_back(in->data->permutations[i]);
     }
+
 }
 
 bool pq::normal_order_true_vacuum(std::vector<std::shared_ptr<pq> > &ordered) {
@@ -3235,8 +3291,12 @@ bool pq::normal_order_true_vacuum(std::vector<std::shared_ptr<pq> > &ordered) {
 
         if ( swap ) {
 
-            s1->delta1.push_back(symbol[i]);
-            s1->delta2.push_back(symbol[i+1]);
+            std::vector<std::string> labels;
+            delta_functions deltas;
+            deltas.labels.push_back(symbol[i]);
+            deltas.labels.push_back(symbol[i+1]);
+            deltas.sort();
+            s1->data->deltas.push_back(deltas);
 
             s2->sign = -s2->sign;
             s2->symbol.push_back(symbol[i+1]);
@@ -3420,8 +3480,13 @@ bool pq::normal_order_fermi_vacuum(std::vector<std::shared_ptr<pq> > &ordered) {
             // we're going to have two new strings
             n_new_strings = 2;
 
-            s1->delta1.push_back(symbol[i]);
-            s1->delta2.push_back(symbol[i+1]);
+            // delta function
+            std::vector<std::string> labels;
+            delta_functions deltas;
+            deltas.labels.push_back(symbol[i]);
+            deltas.labels.push_back(symbol[i+1]);
+            deltas.sort();
+            s1->data->deltas.push_back(deltas);
 
             s2->sign = -s2->sign;
             s2->symbol.push_back(symbol[i+1]);
@@ -3667,9 +3732,16 @@ bool pq::normal_order(std::vector<std::shared_ptr<pq> > &ordered) {
 }
 
 // re-classify fluctuation potential terms
-void pq::reclassify_tensors() {
+void pq::reclassify_integrals() {
 
-    if ( data->tensor_type == "OCC_REPULSION") {
+    if ( data->ints["occ_repulsion"].size() > 1 ) {
+       printf("\n");
+       printf("only support for one integral type object per string\n");
+       printf("\n");
+       exit(1);
+    }
+
+    if ( data->ints["occ_repulsion"].size() > 0 ) {
 
         // pick summation label not included in string already
         std::vector<std::string> occ_out{"i","j","k","l","m","n","o","t","i0","i1","i2","i3","i4","i5","i6","i7","i8","i9"};
@@ -3691,17 +3763,31 @@ void pq::reclassify_tensors() {
             exit(1);
         }
 
-        std::string idx1 = data->tensor[0];
-        std::string idx2 = data->tensor[1];
+        std::string idx1 = data->ints["occ_repulsion"][0].labels[0];
+        std::string idx2 = data->ints["occ_repulsion"][0].labels[1];
 
-        data->tensor.clear();
+        data->ints["occ_repulsion"].clear();
 
-        data->tensor.push_back(idx1);
-        data->tensor.push_back(idx);
-        data->tensor.push_back(idx2);
-        data->tensor.push_back(idx);
+        integrals ints;
 
-        data->tensor_type = "ERI";
+        ints.labels.clear();
+        ints.numerical_labels.clear();
+
+        ints.labels.push_back(idx1);
+        ints.labels.push_back(idx);
+        ints.labels.push_back(idx2);
+        ints.labels.push_back(idx);
+
+        ints.sort();
+
+        if ( data->ints["eri"].size() > 0 ) {
+           printf("\n");
+           printf("only support for one integral type object per string\n");
+           printf("\n");
+           exit(1);
+        }
+        data->ints["eri"].clear();
+        data->ints["eri"].push_back(ints);
 
     }
 

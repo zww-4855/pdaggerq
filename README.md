@@ -131,7 +131,7 @@ When using pdaggerq for research projects, please cite:
 
 ```
 @misc{pdaggerq_2021,
-    author       = {A. Eugene dePrince and Nicholas C. Rubin},
+    author       = {A. Eugene DePrince and Nicholas C. Rubin},
     title        = {{pdaggerq}: https://github.com/edeprince3/pdaggerq},
     month        = {June},
     year         = {2021},
@@ -175,8 +175,7 @@ involving general labels are split into sums involving occupied and virtual orbi
 and o4 (occupied) or v1, v2, v3, and v4 (virtual). So, we recommend avoiding using these labels when specifying any
 other components of your strings.
 
-Orbital labels refer to spin orbitals. In principle, one could explicitly specify spin labels with labels such as ia,
-ib, etc., but no checks on delta functions involving alpha / beta spin components defined in this way are performed.
+Orbital labels refer to spin orbitals. There is functionality to integrate out spin in final expressions, [see below](#spin).
 
 ### Methods
 Strings are defined in Python using the pq_helper class, which has the following functions:
@@ -210,51 +209,55 @@ the fluctuation potental operator
 ```
 'v' 
 ```
-a pair of creation/annihilation operators, i.e., p\*q
+creation / annihilation operators. e.g., <img src="https://render.githubusercontent.com/render/math?math=a^{\dagger}_i">, <img src="https://render.githubusercontent.com/render/math?math=a_j">, etc.
+```
+a*(i)
+a(j)
+```
+up to four-body transition operators, e.g., p\*q, p\*q\*rs, etc.
 ```
 'e1(p,q)' 
-```   
-a two-body transition operator, i.,e., p\*q\*rs
-```
 'e2(p,q,r,s)' 
 ```    
-a three-body transition operator, i.,e., p\*q\*r\*stu
-```
-'e3(p,q,r,s,t,u)' 
-```    
-singles and doubles t-amplitudes 
+singles, doubles, triples, and quadruples t-amplitudes 
 ```
 't1'
 't2' 
+'t3'
+'t4'
 ```
-reference, singles, and doubles left-hand amplitudes 
+reference, singles, doubles, triples, and quadruples left-hand amplitudes 
 
 ```
 'l0'
 'l1'  
-'l2'   
+'l2'  
+'l3'
+'l4'
 ```    
-reference, singles, and doubles right-hand amplitudes 
+reference, singles, doubles, triples, and quadruples right-hand amplitudes 
 ```
 'r0'
 'r1'  
-'r2'   
+'r2'
+'r3'
+'r4'
 ```    
-Note that factors such as the 1/4 associated with t2, l2, and r2 are handled internally.
+Note that all factors such as the 1/4 associated with t2, l2, and r2 are handled internally.
     
 #### add_commutator: 
 
 set strings corresponding to a commutator of operators. Note that the arguments are lists to allow for commutators of
 products of operators.
 ```
-add_commutator(1.0, ['f'],['t2'])
+add_commutator(1.0, ['f'], ['t2'])
 ```
 #### add_double_commutator: 
 
 set strings corresponding to a double commutator involving three operators. Note that the arguments are lists to allow
 for commutators of products of operators.
 ```
-add_double_commutator(1.0/2.0, ['f'],['t2'],['t1'])
+add_double_commutator(1.0/2.0, ['f'], ['t2'], ['t1'])
 ```    
 #### add_triple_commutator: 
 
@@ -262,7 +265,7 @@ set strings corresponding to a triple commutator involving four operators. Note 
 for commutators of products of operators.
 
 ```
-add_triple_commutator(1.0/6.0, ['f','t2','t1', 't1'])
+add_triple_commutator(1.0/6.0, ['f'], ['t2'], ['t1'], ['t1'])
 ```    
 #### add_quadruple_commutator: 
 
@@ -270,7 +273,7 @@ set strings corresponding to a quadruple commutator involving five operators. No
 for commutators of products of operators.
     
 ```
-add_quadruple_commutator(1.0/24.0, ['f','t2','t1', 't1', 't1'])
+add_quadruple_commutator(1.0/24.0, ['f'], ['t2'], ['t1'], ['t1'], ['t1'])
 ```
 
 #### add_st_operator: 
@@ -278,7 +281,7 @@ add_quadruple_commutator(1.0/24.0, ['f','t2','t1', 't1', 't1'])
 set strings corresponding to a similarity transformed operator commutator involving five operators. The first argument
 after the numerical value is a list of operators; the product of these operators will be similarity transformed. The
 next argument is a list of operators appearing as a sum the exponential function. The similarity transformation is
-performed by applying the BCH expansion up to four nested commutators.
+performed by applying the BCH expansion four nested commutators.
 
 ```
 add_st_operator(1.0, ['v'],['t1','t2'])
@@ -313,10 +316,10 @@ simplify()
         
 #### print: 
     
-print current list of strings.
+print current list of strings. which strings is dictated by the string_type flag. the default value is string_type = 'fully-contracted'
 
 ```
-print()
+print(string_type = 'all/fully-contracted/one-body/two-body')
 ```        
 
 #### fully_contracted_strings: 
@@ -326,38 +329,29 @@ returns strings involving no creation / annihilation operators
 ```
 fully_contracted_strings()
 ```    
-#### print_fully_contracted: 
+
+<a name="spin"></a>
+
+#### fully_contracted_with_spin: 
     
-print strings involving no creation / annihilation operators
+returns strings involving no creation / annihilation operators. integrate spin, eliminating non-spin-conserving terms, given a dictionary of spins for non-summed labels.
 
 ```
-print_fully_contracted()
+spin_labels = {
+    'e' : 'a',
+    'f' : 'b',
+    'm' : 'a',
+    'n' : 'b'
+}
+fully_contracted_strings_with_spin(spin_labels)
 ```
+
+
 #### clear: 
 clear the current set of strings
 
 ```
 clear()
-```    
-
-### Ladder operator Algebra
-Strings of bare creation/annihilation operators may also be specified manually using the following commands. 
-
-#### set_string: 
-set the string of creation and annihiliation operators.
-
-```
-set_string(['p*','q','a*','i'])
-```    
-#### set_factor: 
-define a numerical factor to accompany the string. The default value is 1.0.
-```
-set_factor(0.5)
-```
-#### add_new_string: 
-bring string to normal order and add to existing list of strings.
-```
-add_new_string()
 ```    
                 
         
